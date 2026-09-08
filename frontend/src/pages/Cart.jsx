@@ -199,11 +199,11 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-8">
+    <div className="min-h-screen bg-[#F8FAFC] py-5 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               My Shopping Cart
@@ -214,25 +214,26 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
           </div>
           <button
             onClick={() => navigateTo('products')}
-            className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:underline"
+            className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:underline"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Continue Shopping</span>
+            <span className="hidden sm:inline">Continue Shopping</span>
+            <span className="sm:hidden">Shop</span>
           </button>
         </div>
 
         {/* Free Delivery Bar */}
-        <div className="bg-white rounded-2xl p-4 border border-brand-100 shadow-soft mb-8">
+        <div className="bg-white rounded-2xl p-3.5 sm:p-4 border border-brand-100 shadow-soft mb-6 sm:mb-8">
           <div className="flex items-center justify-between text-xs font-bold mb-2">
             <div className="flex items-center gap-2 text-slate-800">
-              <Truck className="w-4 h-4 text-brand-500" />
+              <Truck className="w-4 h-4 text-brand-500 shrink-0" />
               {amountForFreeDelivery === 0 ? (
-                <span className="text-emerald-600">🎉 Congratulations! You unlocked FREE 15-Min Delivery!</span>
+                <span className="text-emerald-600">🎉 Congratulations! FREE 15-Min Delivery Unlocked!</span>
               ) : (
                 <span>Add <span className="text-brand-600">₹{amountForFreeDelivery}</span> more for FREE Delivery</span>
               )}
             </div>
-            <span className="text-slate-400">Target: ₹{freeDeliveryThreshold}</span>
+            <span className="text-slate-400 hidden sm:inline">Target: ₹{freeDeliveryThreshold}</span>
           </div>
           <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
             <div 
@@ -243,39 +244,34 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         </div>
 
         {/* Cart Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           
           {/* Cart Items List */}
           <div className="lg:col-span-8 space-y-4">
-            <div className="bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-soft divide-y divide-slate-100">
+            <div className="bg-white rounded-3xl p-3.5 sm:p-6 border border-slate-200/80 shadow-soft divide-y divide-slate-100">
               {cart.map((item) => (
-                <div key={item.id} className="py-4 first:pt-0 last:pb-0 flex items-center justify-between gap-4">
+                <div key={item.id} className="py-3.5 sm:py-4 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                   {/* Image & Info */}
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-20 h-20 rounded-2xl bg-slate-50 p-2 flex items-center justify-center flex-shrink-0 border border-slate-100">
+                  <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-50 p-2 flex items-center justify-center shrink-0 border border-slate-100">
                       <img
                         src={item.image}
                         alt={item.name}
                         className="max-h-full max-w-full object-contain mix-blend-multiply"
                       />
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-slate-900 text-sm sm:text-base truncate">
                         {item.name}
                       </h4>
                       <p className="text-xs text-slate-400 font-medium">
                         {item.unit} • ₹{item.price} each
                       </p>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-xs font-bold text-slate-900 sm:hidden">
-                          Total: ₹{item.price * item.quantity}
-                        </span>
-                      </div>
                     </div>
                   </div>
 
-                  {/* Quantity Stepper & Price */}
-                  <div className="flex items-center gap-4 sm:gap-6 flex-shrink-0">
+                  {/* Quantity Stepper & Price & Remove */}
+                  <div className="flex items-center justify-between sm:justify-end gap-3 sm:gap-6 shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-50">
                     <div className="flex items-center bg-slate-100 rounded-xl p-1">
                       <button
                         onClick={() => decreaseQuantity(item.id)}
@@ -296,15 +292,15 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                       </button>
                     </div>
 
-                    <div className="hidden sm:block text-right min-w-[70px]">
-                      <span className="text-base font-black text-slate-900">
+                    <div className="text-right min-w-[60px] sm:min-w-[70px]">
+                      <span className="text-sm sm:text-base font-black text-slate-900">
                         ₹{item.price * item.quantity}
                       </span>
                     </div>
 
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
+                      className="p-1.5 sm:p-2 text-slate-300 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-colors"
                       title="Remove"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -326,8 +322,8 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
           </div>
 
           {/* Order Summary Card */}
-          <div className="lg:col-span-4 space-y-6 sticky top-28">
-            <div className="bg-white rounded-3xl p-6 border border-slate-200/80 shadow-soft space-y-6">
+          <div className="lg:col-span-4 space-y-6 lg:sticky lg:top-28">
+            <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200/80 shadow-soft space-y-6">
               <h3 className="text-lg font-black text-slate-900 pb-3 border-b border-slate-100">
                 Order Summary
               </h3>

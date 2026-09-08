@@ -6,6 +6,7 @@ import { AuthProvider } from './context/AuthContext';
 import { Navbar } from './components/common/Navbar';
 import { Footer } from './components/common/Footer';
 import { Toast } from './components/common/Toast';
+import { MobileBottomBar } from './components/common/MobileBottomBar';
 
 // Pages
 import { Home } from './pages/Home';
@@ -66,11 +67,13 @@ export function App() {
     return 'home';
   };
 
+  const isAdmin = location.pathname.startsWith('/admin');
+
   return (
     <AuthProvider>
       <WishlistProvider>
         <CartProvider>
-          <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-800 selection:bg-brand-500 selection:text-white">
+          <div className={`min-h-screen flex flex-col bg-[#F8FAFC] text-slate-800 selection:bg-brand-500 selection:text-white ${!isAdmin ? 'pb-16 md:pb-0' : ''}`}>
             
             {/* Main Responsive Navbar */}
             <Navbar
@@ -191,6 +194,14 @@ export function App() {
             <Footer
               navigateTo={navigateTo}
             />
+
+            {/* Mobile Native Bottom Navigation Bar */}
+            {!isAdmin && (
+              <MobileBottomBar
+                activePage={getActivePage()}
+                navigateTo={navigateTo}
+              />
+            )}
 
             {/* Notification Toast */}
             <Toast />

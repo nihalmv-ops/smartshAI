@@ -32,29 +32,29 @@ export const PopularProducts = ({ onSelectProduct }) => {
   });
 
   return (
-    <section className="py-14 supermart-hero border-t border-slate-100">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className="py-10 sm:py-14 supermart-hero border-t border-slate-100">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         
         {/* Header & Filter Tabs */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
               Popular Products
             </h2>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-0.5 sm:mt-1">
               Check out our most loved products handpicked for everyday freshness
             </p>
           </div>
 
           {/* Filter Pills matching mockup */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 lg:pb-0 scrollbar-none">
+          <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 lg:pb-0 no-scrollbar">
             {filterTabs.map((tab) => {
               const isActive = selectedCategory === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setSelectedCategory(tab.id)}
-                  className={`px-4 py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 ${
+                  className={`px-3.5 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-semibold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                     isActive
                       ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
                       : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200/80'
@@ -67,12 +67,12 @@ export const PopularProducts = ({ onSelectProduct }) => {
           </div>
         </div>
 
-        {/* Product Cards Grid (6 on desktop, 3 on tablet, 2 on mobile matching mockup) */}
+        {/* Product Cards Grid: 2 on mobile, 3 on tablet portrait, 4 on tablet landscape, 6 on desktop */}
         {popularList.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 sm:gap-5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5 sm:gap-4 lg:gap-5">
             {popularList.map((product) => (
               <ProductCard
-                key={product.id}
+                key={product.id || product._id}
                 product={product}
                 onSelectProduct={onSelectProduct}
               />

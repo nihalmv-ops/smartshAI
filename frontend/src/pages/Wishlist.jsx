@@ -52,11 +52,11 @@ export const Wishlist = ({ navigateTo: propNavigateTo, onSelectProduct: propOnSe
   }
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-8">
+    <div className="min-h-screen bg-[#F8FAFC] py-5 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-6 sm:mb-8">
           <div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
               My Saved Wishlist
@@ -66,7 +66,7 @@ export const Wishlist = ({ navigateTo: propNavigateTo, onSelectProduct: propOnSe
             </p>
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3 sm:gap-4">
             <button
               onClick={clearWishlist}
               className="text-xs text-rose-500 hover:text-rose-700 font-bold"
@@ -75,20 +75,21 @@ export const Wishlist = ({ navigateTo: propNavigateTo, onSelectProduct: propOnSe
             </button>
             <button
               onClick={() => navigateTo('products')}
-              className="hidden sm:flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:underline"
+              className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:underline"
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Back to Store</span>
+              <span className="hidden sm:inline">Back to Store</span>
+              <span className="sm:hidden">Store</span>
             </button>
           </div>
         </div>
 
         {/* Wishlist Products Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
           {wishlist.map((product) => (
             <div
               key={product.id}
-              className="bg-white rounded-3xl p-4 border border-slate-200/80 shadow-soft flex flex-col justify-between group"
+              className="bg-white rounded-3xl p-3 sm:p-4 border border-slate-200/80 shadow-soft flex flex-col justify-between group"
             >
               <div>
                 <div className="flex items-center justify-between">
@@ -106,7 +107,7 @@ export const Wishlist = ({ navigateTo: propNavigateTo, onSelectProduct: propOnSe
 
                 <div 
                   onClick={() => handleSelectProduct(product)}
-                  className="w-full h-40 flex items-center justify-center my-3 cursor-pointer overflow-hidden rounded-xl bg-slate-50/50"
+                  className="w-full h-28 sm:h-40 flex items-center justify-center my-2 sm:my-3 cursor-pointer overflow-hidden rounded-xl bg-slate-50/50"
                 >
                   <img
                     src={product.image}

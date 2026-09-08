@@ -6,7 +6,26 @@
   html {
     scroll-behavior: smooth;
     font-family: 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif;
+    overflow-x: hidden;
+    max-width: 100%;
   }
+  body {
+    overflow-x: hidden;
+    max-width: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+/* Hide scrollbar for clean horizontal scroll chips */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Custom modern scrollbar */
@@ -65,6 +84,25 @@
   width: 340px;
   height: 340px;
   background: rgba(219, 234, 254, 0.5);
+}
+
+@media (max-width: 640px) {
+  .hero-shape-one {
+    width: 240px;
+    height: 240px;
+    right: 0%;
+    top: -5%;
+  }
+  .hero-shape-two {
+    width: 200px;
+    height: 200px;
+    right: 0%;
+  }
+  .hero-shape-three {
+    width: 180px;
+    height: 180px;
+    left: 0%;
+  }
 }
 
 /* Decorative Dots Matrix */

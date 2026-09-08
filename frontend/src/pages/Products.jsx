@@ -132,7 +132,7 @@ export const Products = ({
     inStockOnly;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-8">
+    <div className="min-h-screen bg-[#F8FAFC] py-5 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Breadcrumb & Title */}
@@ -374,7 +374,7 @@ export const Products = ({
 
             {/* Product Grid / List */}
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+              <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5">
                 {[1, 2, 3, 4, 5, 6].map((sk) => (
                   <div key={sk} className="bg-white rounded-3xl p-4 border border-slate-100 shadow-soft animate-pulse space-y-3">
                     <div className="w-full h-44 bg-slate-100 rounded-2xl"></div>
@@ -390,7 +390,7 @@ export const Products = ({
             ) : filteredProducts.length > 0 ? (
               <div className={
                 viewMode === 'grid'
-                  ? "grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5"
+                  ? "grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-2.5 sm:gap-5"
                   : "space-y-4"
               }>
                 {filteredProducts.map((product) => (

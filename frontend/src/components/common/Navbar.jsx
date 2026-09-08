@@ -94,23 +94,23 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
         <span>Get <strong>20% OFF</strong> on your first grocery order with code <strong>FRESH20</strong> • Free Delivery on orders over ₹199</span>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-16 sm:h-20 gap-2 sm:gap-4">
           
           {/* Logo */}
           <div 
             onClick={() => navigateTo('home')}
-            className="flex items-center gap-3 cursor-pointer group flex-shrink-0"
+            className="flex items-center gap-2 sm:gap-3 cursor-pointer group flex-shrink-0"
           >
-            <div className="w-11 h-11 rounded-2xl bg-brand-500 text-white flex items-center justify-center shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
-              <ShoppingCart className="w-6 h-6 stroke-[2.2]" />
+            <div className="w-8 h-8 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl bg-brand-500 text-white flex items-center justify-center shadow-md sm:shadow-lg shadow-brand-500/25 group-hover:scale-105 transition-transform">
+              <ShoppingCart className="w-4 h-4 sm:w-6 sm:h-6 stroke-[2.2]" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-2xl font-extrabold text-slate-900 tracking-tight">Smart<span className="text-brand-500">Mart</span></span>
-                <span className="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded-md">AI</span>
+              <div className="flex items-center gap-1">
+                <span className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight">Smart<span className="text-brand-500">Mart</span></span>
+                <span className="px-1 py-0.2 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded">AI</span>
               </div>
-              <p className="text-[11px] font-semibold tracking-wider text-slate-400 uppercase">Fresh • Fast • Reliable</p>
+              <p className="text-[9px] sm:text-[11px] font-semibold tracking-wider text-slate-400 uppercase hidden xs:block">Fresh • Fast • Reliable</p>
             </div>
           </div>
 
@@ -143,7 +143,7 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
               />
               <button
                 type="submit"
-                className="absolute right-1.5 w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center hover:bg-brand-600 transition-colors shadow-sm"
+                className="absolute right-1.5 w-8 h-8 rounded-full bg-brand-500 text-white flex items-center justify-center hover:bg-brand-600 transition-colors shadow-sm cursor-pointer"
               >
                 <Search className="w-4 h-4 stroke-[2.5]" />
               </button>
@@ -157,7 +157,7 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
                 </div>
                 {searchResults.map((prod) => (
                   <div
-                    key={prod.id}
+                    key={prod.id || prod._id}
                     onClick={() => selectSearchResult(prod)}
                     className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors"
                   >
@@ -178,17 +178,17 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
           </div>
 
           {/* Right Action Icons & Auth */}
-          <div className="flex items-center gap-3 sm:gap-4">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             
             {/* Wishlist Icon */}
             <button
               onClick={() => navigateTo('wishlist')}
-              className="relative p-2.5 text-slate-600 hover:text-brand-500 hover:bg-slate-50 rounded-full transition-colors"
+              className="relative p-2 sm:p-2.5 text-slate-600 hover:text-brand-500 hover:bg-slate-50 rounded-full transition-colors cursor-pointer"
               title="Wishlist"
             >
-              <Heart className="w-5 h-5" />
+              <Heart className="w-4 h-4 sm:w-5 sm:h-5" />
               {totalWishlist > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 bg-rose-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 bg-rose-500 text-white text-[10px] sm:text-[11px] font-bold rounded-full flex items-center justify-center shadow-sm">
                   {totalWishlist}
                 </span>
               )}
@@ -197,12 +197,12 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
             {/* Cart Icon with Live Count */}
             <button
               onClick={() => navigateTo('cart')}
-              className="relative p-2.5 text-slate-600 hover:text-brand-500 hover:bg-slate-50 rounded-full transition-colors"
+              className="relative p-2 sm:p-2.5 text-slate-600 hover:text-brand-500 hover:bg-slate-50 rounded-full transition-colors cursor-pointer"
               title="Shopping Cart"
             >
-              <ShoppingCart className="w-5 h-5" />
+              <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
               {totalItems > 0 && (
-                <span className="absolute -top-0.5 -right-0.5 min-w-[20px] h-5 px-1 bg-brand-500 text-white text-[11px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] sm:min-w-[20px] sm:h-5 px-1 bg-brand-500 text-white text-[10px] sm:text-[11px] font-bold rounded-full flex items-center justify-center shadow-sm">
                   {totalItems}
                 </span>
               )}
@@ -212,7 +212,7 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
             {isAuthenticated && user?.role === 'admin' && (
               <button
                 onClick={() => navigateTo('admin')}
-                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-xs"
+                className="hidden lg:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                 title="Admin Dashboard"
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
@@ -225,20 +225,20 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
               {isAuthenticated ? (
                 <button
                   onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
-                  className="flex items-center gap-2 pl-2 pr-3 py-1.5 rounded-full hover:bg-slate-50 border border-slate-200 transition-colors"
+                  className="flex items-center gap-1.5 sm:gap-2 pl-1.5 pr-2 sm:pl-2 sm:pr-3 py-1 sm:py-1.5 rounded-full hover:bg-slate-50 border border-slate-200 transition-colors cursor-pointer"
                 >
-                  <div className="w-7 h-7 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-xs">
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-brand-100 text-brand-600 flex items-center justify-center font-bold text-xs">
                     {user.name.charAt(0)}
                   </div>
-                  <span className="text-sm font-semibold text-slate-700 hidden sm:inline max-w-[100px] truncate">
+                  <span className="text-xs sm:text-sm font-semibold text-slate-700 hidden sm:inline max-w-[90px] truncate">
                     {user.name.split(' ')[0]}
                   </span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                  <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                 </button>
               ) : (
                 <button
                   onClick={() => navigateTo('login')}
-                  className="px-5 py-2 rounded-full border border-brand-500 text-brand-600 hover:bg-brand-500 hover:text-white text-sm font-semibold transition-all shadow-sm"
+                  className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-full border border-brand-500 text-brand-600 hover:bg-brand-500 hover:text-white text-xs sm:text-sm font-semibold transition-all shadow-xs cursor-pointer"
                 >
                   Login
                 </button>

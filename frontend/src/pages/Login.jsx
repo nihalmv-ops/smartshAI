@@ -109,7 +109,7 @@ export const Login = ({ navigateTo }) => {
             </span>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 pt-1">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
             <button
               type="button"
               onClick={() => handleQuickLogin('admin@smartmart.ai', 'adminpassword123')}
@@ -142,7 +142,7 @@ export const Login = ({ navigateTo }) => {
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft">
+        <div className="bg-white rounded-3xl p-5 sm:p-8 border border-slate-200/80 shadow-soft">
           {success ? (
             <div className="py-8 text-center space-y-3 animate-fadeIn">
               <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">

@@ -79,9 +79,9 @@ export const Orders = ({ navigateTo }) => {
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
         <div>
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight flex items-center gap-2.5">
             <ShoppingBag className="w-7 h-7 text-brand-500 stroke-[2.2]" />
@@ -109,7 +109,7 @@ export const Orders = ({ navigateTo }) => {
       )}
 
       {orders.length === 0 ? (
-        <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 shadow-soft max-w-md mx-auto my-12">
+        <div className="bg-white rounded-3xl p-8 sm:p-12 text-center border border-slate-100 shadow-soft max-w-md mx-auto my-8 sm:my-12">
           <div className="w-20 h-20 bg-brand-50 text-brand-500 rounded-full flex items-center justify-center mx-auto mb-4">
             <Package className="w-10 h-10 stroke-[1.5]" />
           </div>
@@ -126,7 +126,7 @@ export const Orders = ({ navigateTo }) => {
           </button>
         </div>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {orders.map((order) => {
             const formattedDate = new Date(order.createdAt).toLocaleDateString('en-IN', {
               day: 'numeric',
@@ -139,14 +139,14 @@ export const Orders = ({ navigateTo }) => {
             return (
               <div
                 key={order._id}
-                className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200/80 shadow-soft transition-all hover:shadow-md"
+                className="bg-white rounded-3xl p-4 sm:p-7 border border-slate-200/80 shadow-soft transition-all hover:shadow-md"
               >
                 {/* Order Top Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-4 pb-5 border-b border-slate-100">
+                <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4 pb-4 sm:pb-5 border-b border-slate-100">
                   <div className="space-y-1">
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex items-center gap-2 sm:gap-2.5">
                       <span className="text-xs font-bold uppercase tracking-wider text-slate-400">Order ID</span>
-                      <span className="font-mono text-sm font-bold text-slate-800">#{order._id.slice(-8).toUpperCase()}</span>
+                      <span className="font-mono text-xs sm:text-sm font-bold text-slate-800">#{order._id.slice(-8).toUpperCase()}</span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-slate-500">
                       <Calendar className="w-3.5 h-3.5 text-slate-400" />
@@ -154,28 +154,28 @@ export const Orders = ({ navigateTo }) => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-4">
+                  <div className="w-full sm:w-auto flex items-center justify-between sm:justify-end gap-3 sm:gap-4 pt-1 sm:pt-0">
                     {getStatusBadge(order.status)}
                     <div className="text-right">
                       <span className="text-[11px] text-slate-400 block font-medium">Total Amount</span>
-                      <span className="text-lg font-black text-slate-900">₹{order.totalPrice}</span>
+                      <span className="text-base sm:text-lg font-black text-slate-900">₹{order.totalPrice}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Ordered Items List */}
-                <div className="py-4 space-y-3">
+                <div className="py-3 sm:py-4 space-y-3">
                   {order.orderItems.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-3 text-sm">
+                    <div key={idx} className="flex items-center justify-between gap-3 text-xs sm:text-sm">
                       <div className="flex items-center gap-3 min-w-0">
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-12 h-12 rounded-xl object-cover bg-slate-100 border border-slate-100 flex-shrink-0"
+                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover bg-slate-100 border border-slate-100 shrink-0"
                         />
                         <div className="min-w-0">
                           <p className="font-bold text-slate-800 truncate">{item.name}</p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-[11px] sm:text-xs text-slate-500">
                             {item.qty || item.quantity || 1} × ₹{item.price} {item.unit ? `(${item.unit})` : ''}
                           </p>
                         </div>
@@ -188,15 +188,15 @@ export const Orders = ({ navigateTo }) => {
                 </div>
 
                 {/* Footer Info: Address & Payment */}
-                <div className="pt-4 mt-2 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500">
+                <div className="pt-3 sm:pt-4 mt-2 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-500">
                   <div className="flex items-center gap-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                     <span>
                       Delivered to: <strong>{order.shippingAddress?.fullName || user?.name}</strong>,{' '}
                       {order.shippingAddress?.address}, {order.shippingAddress?.city}
                     </span>
                   </div>
-                  <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                     <div className="font-semibold text-slate-600">
                       Payment: <span className="text-brand-600 font-bold">{order.paymentMethod}</span>
                     </div>

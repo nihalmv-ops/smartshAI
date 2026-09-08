@@ -98,7 +98,7 @@ export const Register = ({ navigateTo }) => {
         </div>
 
         {/* Main Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200/80 shadow-soft">
+        <div className="bg-white rounded-3xl p-5 sm:p-8 border border-slate-200/80 shadow-soft">
           {success ? (
             <div className="py-8 text-center space-y-3 animate-fadeIn">
               <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto">

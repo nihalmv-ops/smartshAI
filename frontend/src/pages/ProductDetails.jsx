@@ -114,7 +114,7 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
   ];
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] py-8">
+    <div className="min-h-screen bg-[#F8FAFC] py-5 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         {/* Breadcrumbs & Back */}
@@ -137,17 +137,18 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
             className="flex items-center gap-1.5 text-xs font-bold text-slate-600 hover:text-brand-600 transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Back to Products</span>
+            <span className="hidden sm:inline">Back to Products</span>
+            <span className="sm:hidden">Back</span>
           </button>
         </div>
 
         {/* Main Product Card */}
-        <div className="bg-white rounded-3xl p-6 sm:p-10 border border-slate-200/80 shadow-soft mb-12">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-14">
+        <div className="bg-white rounded-3xl p-4 sm:p-8 lg:p-10 border border-slate-200/80 shadow-soft mb-8 sm:mb-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14">
             
             {/* Left: Product Image Showcase */}
             <div className="lg:col-span-6 flex flex-col items-center justify-center">
-              <div className="relative w-full aspect-square max-w-md bg-slate-50/80 rounded-3xl p-8 flex items-center justify-center border border-slate-100 overflow-hidden group">
+              <div className="relative w-full aspect-square max-w-md bg-slate-50/80 rounded-3xl p-4 sm:p-8 flex items-center justify-center border border-slate-100 overflow-hidden group">
                 <img
                   src={product.image}
                   alt={product.name}
@@ -374,7 +375,7 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
             <h3 className="text-xl sm:text-2xl font-extrabold text-slate-900 tracking-tight">
               Related Products You May Like
             </h3>
-            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
               {relatedProducts.map(rel => (
                 <ProductCard
                   key={rel.id}

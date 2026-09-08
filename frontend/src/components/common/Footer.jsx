@@ -18,7 +18,7 @@ export const Footer = ({ navigateTo }) => {
   };
 
   return (
-    <footer className="bg-[#0B1426] text-slate-300 pt-16 pb-8 border-t border-slate-800">
+    <footer className="bg-[#0B1426] text-slate-300 pt-12 sm:pt-16 pb-8 border-t border-slate-800">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 pb-12 border-b border-slate-800/80">
@@ -128,9 +128,9 @@ export const Footer = ({ navigateTo }) => {
         </div>
 
         {/* Bottom Bar matching mockup */}
-        <div className="pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500">
+        <div className="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
           <p>© 2026 SmartMart AI. All rights reserved.</p>
-          <div className="flex items-center gap-6">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6">
             <a href="#terms" className="hover:text-slate-400 transition-colors">Terms & Conditions</a>
             <span>•</span>
             <a href="#privacy" className="hover:text-slate-400 transition-colors">Privacy Policy</a>

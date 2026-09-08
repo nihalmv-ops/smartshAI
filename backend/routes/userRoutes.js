@@ -7,7 +7,9 @@ import {
   updateUserProfile,
   getAllUsers,
   updateUserRole,
-  deleteUser
+  deleteUser,
+  registerAdmin,
+  createAdminByAdmin
 } from '../controllers/userController.js';
 import { protect, admin } from '../middleware/authMiddleware.js';
 
@@ -17,6 +19,10 @@ const router = express.Router();
 router.post('/register', registerUser);
 router.post('/login', loginUser);
 router.post('/google', googleAuth);
+
+// Dedicated Admin Registration & Creation
+router.post('/admin/register', registerAdmin);
+router.post('/admin/create', protect, admin, createAdminByAdmin);
 
 // User Profile (Protected)
 router.route('/profile')

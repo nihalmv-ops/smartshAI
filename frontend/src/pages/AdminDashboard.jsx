@@ -102,6 +102,13 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
   const [usersList, setUsersList] = useState([]);
   const [userSearch, setUserSearch] = useState('');
   const [userActionLoading, setUserActionLoading] = useState(false);
+  const [createAdminModalOpen, setCreateAdminModalOpen] = useState(false);
+  const [newAdminForm, setNewAdminForm] = useState({
+    name: '',
+    email: '',
+    password: '',
+    phone: ''
+  });
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -351,6 +358,28 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
       fetchDashboardData();
     } catch (err) {
       showToast(err.message || 'Failed to delete user', 'error');
+    } finally {
+      setUserActionLoading(false);
+    }
+  };
+
+  const handleCreateNewAdmin = async (e) => {
+    e.preventDefault();
+    if (!newAdminForm.name.trim() || !newAdminForm.email.trim() || !newAdminForm.password.trim()) {
+      showToast('Name, email, and password are required', 'error');
+      return;
+    }
+
+    setUserActionLoading(true);
+    try {
+      await adminService.createAdminUser(newAdminForm);
+      showToast(`Administrator "${newAdminForm.name}" created successfully!`);
+      setCreateAdminModalOpen(false);
+      setNewAdminForm({ name: '', email: '', password: '', phone: '' });
+      await fetchUsers();
+      await fetchDashboardData();
+    } catch (err) {
+      showToast(err.message || 'Failed to create administrator', 'error');
     } finally {
       setUserActionLoading(false);
     }
@@ -1112,7 +1141,7 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
         {/* ================================================================= */}
         {activeTab === 'users' && (
           <div className="space-y-6">
-            {/* Search Bar */}
+            {/* Search Bar & Actions */}
             <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="relative w-full sm:w-80">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -1124,9 +1153,19 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
                   className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                 />
               </div>
-              <p className="text-xs text-slate-500 font-medium">
-                Total Registered Accounts: <strong>{usersList.length}</strong>
-              </p>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                <p className="text-xs text-slate-500 font-medium">
+                  Total Accounts: <strong>{usersList.length}</strong>
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setCreateAdminModalOpen(true)}
+                  className="px-4 py-2 bg-brand-500 hover:bg-brand-600 active:scale-98 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-md shadow-brand-500/20 transition-all cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Add Administrator</span>
+                </button>
+              </div>
             </div>
 
             {/* Users Table */}
@@ -1781,6 +1820,120 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
                 >
                   <Check className="w-3.5 h-3.5 stroke-[3]" />
                   <span>Save Phone Number</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* CREATE NEW ADMINISTRATOR MODAL                                      */}
+      {/* =================================================================== */}
+      {createAdminModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-fadeIn">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-md shadow-brand-500/20">
+                  <ShieldCheck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Add Administrator</h3>
+                  <p className="text-xs text-slate-500">Create staff account with full control access</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setCreateAdminModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateNewAdmin} className="space-y-3.5 my-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Administrator Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newAdminForm.name}
+                  onChange={(e) => setNewAdminForm({ ...newAdminForm, name: e.target.value })}
+                  placeholder="e.g. Sarah Jenkins"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Administrator Email *</label>
+                <input
+                  type="email"
+                  required
+                  value={newAdminForm.email}
+                  onChange={(e) => setNewAdminForm({ ...newAdminForm, email: e.target.value })}
+                  placeholder="sarah@smartmart.ai"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Temporary Password *</label>
+                  <input
+                    type="password"
+                    required
+                    value={newAdminForm.password}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, password: e.target.value })}
+                    placeholder="••••••••"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Phone Number</label>
+                  <input
+                    type="tel"
+                    value={newAdminForm.phone}
+                    onChange={(e) => setNewAdminForm({ ...newAdminForm, phone: e.target.value })}
+                    placeholder="+91 99999 11111"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  />
+                </div>
+              </div>
+
+              <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 space-y-1">
+                <span className="font-bold flex items-center gap-1">
+                  <ShieldCheck className="w-3.5 h-3.5 text-amber-600" />
+                  Admin Privileges Granted
+                </span>
+                <p className="text-[11px] text-amber-700 leading-relaxed">
+                  This user will have full access to add products, adjust stock, manage orders, and modify store configurations.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setCreateAdminModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={userActionLoading}
+                  className="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5 disabled:opacity-70"
+                >
+                  {userActionLoading ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Creating...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-3.5 h-3.5 stroke-[3]" />
+                      <span>Create Administrator</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

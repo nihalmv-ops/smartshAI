@@ -17,8 +17,8 @@ export const ProtectedRoute = ({ children, adminOnly = false }) => {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login page and preserve the attempted location
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    // Redirect to separate admin login if admin route, else customer login
+    return <Navigate to={adminOnly ? "/admin/login" : "/login"} state={{ from: location }} replace />;
   }
 
   if (adminOnly && !isAdmin) {
@@ -27,16 +27,24 @@ export const ProtectedRoute = ({ children, adminOnly = false }) => {
         <div className="w-16 h-16 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center mb-4">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900 mb-1">Access Restricted</h2>
+        <h2 className="text-xl font-bold text-slate-900 mb-1">Administrator Clearance Required</h2>
         <p className="text-sm text-slate-500 max-w-sm mb-6">
-          You need Administrator privileges to view this section.
+          You are currently signed in as a customer account. Please log in through the Administrator Portal to access this dashboard.
         </p>
-        <a
-          href="/"
-          className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-sm transition-colors"
-        >
-          Return to Storefront
-        </a>
+        <div className="flex items-center gap-3">
+          <a
+            href="/"
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
+          >
+            Return to Store
+          </a>
+          <a
+            href="/admin/login"
+            className="px-5 py-2 bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold rounded-xl shadow-md transition-colors"
+          >
+            Go to Admin Portal
+          </a>
+        </div>
       </div>
     );
   }

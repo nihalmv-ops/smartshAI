@@ -324,3 +324,139 @@ export const googleAuth = async (req, res, next) => {
   }
 };
 
+// @desc    Register a new Admin account using Admin Security Passcode
+// @route   POST /api/users/admin/register
+// @access  Public (Requires Admin Secret Key)
+export const registerAdmin = async (req, res, next) => {
+  try {
+    const { name, email, password, phone, address, adminSecretKey } = req.body;
+
+    const expectedSecret = process.env.ADMIN_SECRET_KEY || 'SMARTMART_ADMIN_2026';
+    if (!adminSecretKey || adminSecretKey.trim() !== expectedSecret) {
+      res.status(403);
+      throw new Error('Invalid Admin Security Passcode. Access denied.');
+    }
+
+    if (!name || !email || !password) {
+      res.status(400);
+      throw new Error('Please provide name, email, and password for admin account');
+    }
+
+    const userExists = await User.findOne({ email: email.toLowerCase() });
+    if (userExists) {
+      if (userExists.role === 'admin') {
+        res.status(400);
+        throw new Error('An administrator account with this email already exists');
+      } else {
+        // Upgrade user to admin
+        userExists.role = 'admin';
+        userExists.name = name || userExists.name;
+        if (password) userExists.password = password;
+        if (phone) userExists.phone = phone;
+        await userExists.save();
+
+        return res.json({
+          success: true,
+          message: 'Account upgraded to Administrator successfully',
+          user: {
+            _id: userExists._id,
+            name: userExists.name,
+            email: userExists.email,
+            role: 'admin',
+            phone: userExists.phone,
+            address: userExists.address,
+            token: generateToken(userExists._id)
+          }
+        });
+      }
+    }
+
+    const adminUser = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      phone: phone || '+91 99999 11111',
+      address: address || 'SmartMart AI HQ, Koramangala, Bengaluru',
+      role: 'admin'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'Administrator account registered successfully',
+      user: {
+        _id: adminUser._id,
+        name: adminUser.name,
+        email: adminUser.email,
+        role: 'admin',
+        phone: adminUser.phone,
+        address: adminUser.address,
+        token: generateToken(adminUser._id)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Logged-in admin creates another admin
+// @route   POST /api/users/admin/create
+// @access  Private / Admin
+export const createAdminByAdmin = async (req, res, next) => {
+  try {
+    const { name, email, password, phone, address } = req.body;
+
+    if (!name || !email || !password) {
+      res.status(400);
+      throw new Error('Please provide name, email, and password');
+    }
+
+    const userExists = await User.findOne({ email: email.toLowerCase() });
+    if (userExists) {
+      if (userExists.role === 'admin') {
+        res.status(400);
+        throw new Error('An administrator with this email already exists');
+      } else {
+        userExists.role = 'admin';
+        if (password) userExists.password = password;
+        await userExists.save();
+        return res.json({
+          success: true,
+          message: `User ${userExists.email} has been promoted to Administrator`,
+          user: {
+            _id: userExists._id,
+            name: userExists.name,
+            email: userExists.email,
+            role: 'admin',
+            phone: userExists.phone,
+            createdAt: userExists.createdAt
+          }
+        });
+      }
+    }
+
+    const newAdmin = await User.create({
+      name,
+      email: email.toLowerCase(),
+      password,
+      phone: phone || '+91 99999 11111',
+      address: address || 'SmartMart AI HQ, Koramangala, Bengaluru',
+      role: 'admin'
+    });
+
+    res.status(201).json({
+      success: true,
+      message: 'New administrator created successfully',
+      user: {
+        _id: newAdmin._id,
+        name: newAdmin.name,
+        email: newAdmin.email,
+        role: newAdmin.role,
+        phone: newAdmin.phone,
+        createdAt: newAdmin.createdAt
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

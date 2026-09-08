@@ -13,6 +13,19 @@ export const authService = {
     return response.data;
   },
 
+  // Register a new administrator with security passcode
+  registerAdmin: async ({ name, email, password, phone, address, adminSecretKey }) => {
+    const response = await api.post('/users/admin/register', {
+      name,
+      email,
+      password,
+      phone,
+      address,
+      adminSecretKey
+    });
+    return response.data;
+  },
+
   // Login user with email and password
   login: async ({ email, password }) => {
     const response = await api.post('/users/login', {

@@ -131,6 +131,27 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Register a new administrator
+  const registerAdmin = async ({ name, email, password, phone, address, adminSecretKey }) => {
+    setLoading(true);
+    setAuthError(null);
+    try {
+      const data = await authService.registerAdmin({ name, email, password, phone, address, adminSecretKey });
+      if (data && data.user) {
+        const authToken = data.user.token;
+        setToken(authToken);
+        setUser(data.user);
+        return { success: true, user: data.user };
+      }
+      throw new Error(data?.message || 'Admin registration failed');
+    } catch (error) {
+      setAuthError(error.message);
+      return { success: false, message: error.message };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Logout
   const logout = () => {
     setToken(null);
@@ -151,6 +172,7 @@ export const AuthProvider = ({ children }) => {
         authError,
         login,
         register,
+        registerAdmin,
         googleLogin,
         logout
       }}

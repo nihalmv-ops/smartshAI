@@ -25,6 +25,12 @@ export const adminService = {
     return response.data;
   },
 
+  // Create a new administrator account (by authorized admin)
+  createAdminUser: async (adminData) => {
+    const response = await api.post('/users/admin/create', adminData);
+    return response.data;
+  },
+
   // Quick adjust product stock count and inStock status
   updateStock: async (productId, stockData) => {
     const response = await api.patch(`/products/${productId}/stock`, stockData);

@@ -236,14 +236,25 @@ export const Login = ({ navigateTo }) => {
             </div>
           )}
 
-          <div className="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-500">
-            Don't have an account yet?{' '}
-            <button
-              onClick={() => navigateTo('register')}
-              className="text-brand-600 font-bold hover:underline"
-            >
-              Create Account
-            </button>
+          <div className="mt-6 pt-4 border-t border-slate-100 text-center text-xs text-slate-500 space-y-2">
+            <div>
+              Don't have an account yet?{' '}
+              <button
+                onClick={() => navigateTo('register')}
+                className="text-brand-600 font-bold hover:underline"
+              >
+                Create Account
+              </button>
+            </div>
+            <div className="pt-1.5">
+              <button
+                onClick={() => navigateTo('admin/login')}
+                className="text-slate-400 hover:text-brand-600 font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-500" />
+                <span>Store Administrator? Access Admin Portal →</span>
+              </button>
+            </div>
           </div>
         </div>
 

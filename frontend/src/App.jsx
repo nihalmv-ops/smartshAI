@@ -19,6 +19,7 @@ import { Register } from './pages/Register';
 import { Orders } from './pages/Orders';
 import { AdminProducts } from './pages/AdminProducts';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminLogin } from './pages/AdminLogin';
 import { ProtectedRoute } from './components/common/ProtectedRoute';
 
 export function App() {
@@ -124,6 +125,20 @@ export function App() {
                     </ProtectedRoute>
                   }
                 />
+                {/* Separate Dedicated Admin Portal Routes */}
+                <Route
+                  path="/admin/login"
+                  element={<AdminLogin navigateTo={navigateTo} />}
+                />
+                <Route
+                  path="/admin-login"
+                  element={<AdminLogin navigateTo={navigateTo} />}
+                />
+                <Route
+                  path="/admin-portal"
+                  element={<AdminLogin navigateTo={navigateTo} />}
+                />
+
                 {/* Protected Admin Routes */}
                 <Route
                   path="/admin"

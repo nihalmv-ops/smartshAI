@@ -58,3 +58,4 @@ export const MobileBottomBar = ({ activePage, navigateTo }) => {
 };
 
 export default MobileBottomBar;
+

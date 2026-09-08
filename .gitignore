@@ -12,6 +12,9 @@ frontend/.env.*.local
 backend/.env
 backend/.env.local
 backend/.env.*.local
+admin/.env
+admin/.env.local
+admin/.env.*.local
 
 # Production build artifacts
 dist/

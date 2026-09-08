@@ -29,8 +29,24 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Enable CORS for frontend integration
+// Enable CORS for frontend and separate admin portal
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000',
+  'http://localhost:3001',
+  process.env.CLIENT_URL,
+  process.env.ADMIN_URL
+].filter(Boolean);
+
 app.use(cors({
   origin: process.env.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+      return callback(null, true);
+    }
+    return callback(null, true);
+  },
   credentials: true
 }));
 

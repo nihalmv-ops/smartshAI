@@ -8,8 +8,7 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle,
-  UserCheck
+  AlertCircle
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { useAdminAuth } from '../context/AdminAuthContext';

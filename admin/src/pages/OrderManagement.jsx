@@ -7,7 +7,6 @@ import {
   MessageSquare,
   X,
   Loader2,
-  Phone,
   AlertCircle
 } from 'lucide-react';
 import { orderService } from '../services/orderService';

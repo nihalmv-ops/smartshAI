@@ -2,15 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  html, body {
-    overflow-x: hidden;
-    max-width: 100%;
-    -webkit-tap-highlight-color: transparent;
-  }
-  body {
-    @apply bg-[#F8FAFC] text-slate-800;
-  }
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+  -webkit-tap-highlight-color: transparent;
+}
+body {
+  background-color: #F8FAFC;
+  color: #1e293b;
 }
 
 /* Hide scrollbars for clean touch sliders */

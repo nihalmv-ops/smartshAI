@@ -1,16 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  TrendingUp,
   ShoppingBag,
   Package,
   Users,
   AlertTriangle,
   ArrowUpRight,
   ArrowRight,
-  Loader2,
-  Calendar,
-  Sparkles
+  Loader2
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { AdminHeader } from '../components/layout/AdminHeader';

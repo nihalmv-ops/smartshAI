@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ShieldCheck, RefreshCw, Phone, Check, X, CheckCircle2, Menu } from 'lucide-react';
+import { RefreshCw, Phone, Check, X, CheckCircle2, Menu } from 'lucide-react';
 import { whatsappService } from '../../services/whatsappService';
 import { WhatsAppIcon } from '../common/WhatsAppIcon';
 import { useAdminLayout } from './AdminLayout';

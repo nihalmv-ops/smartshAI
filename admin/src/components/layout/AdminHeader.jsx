@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { ShieldCheck, RefreshCw, Phone, Check, X, CheckCircle2 } from 'lucide-react';
+import { ShieldCheck, RefreshCw, Phone, Check, X, CheckCircle2, Menu } from 'lucide-react';
 import { whatsappService } from '../../services/whatsappService';
 import { WhatsAppIcon } from '../common/WhatsAppIcon';
+import { useAdminLayout } from './AdminLayout';
 
 export const AdminHeader = ({ title, subtitle, onRefresh, refreshing }) => {
+  const layout = useAdminLayout();
   const [adminPhone, setAdminPhone] = useState(whatsappService.getAdminPhone());
   const [phoneModalOpen, setPhoneModalOpen] = useState(false);
   const [phoneInput, setPhoneInput] = useState(whatsappService.getAdminPhone());
@@ -25,7 +27,7 @@ export const AdminHeader = ({ title, subtitle, onRefresh, refreshing }) => {
   };
 
   return (
-    <header className="h-16 bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
+    <header className="h-16 bg-white border-b border-slate-200 px-3.5 sm:px-6 flex items-center justify-between sticky top-0 z-20 shadow-2xs">
       {/* Toast Alert */}
       {toast && (
         <div className="fixed top-4 right-4 z-50 px-4 py-2.5 bg-slate-900 text-white text-xs font-semibold rounded-xl shadow-xl border border-slate-800 flex items-center gap-2 animate-fadeIn">
@@ -34,26 +36,38 @@ export const AdminHeader = ({ title, subtitle, onRefresh, refreshing }) => {
         </div>
       )}
 
-      {/* Title */}
-      <div>
-        <h2 className="text-base font-black text-slate-900 leading-none">{title}</h2>
-        {subtitle && <p className="text-[11px] text-slate-500 mt-1">{subtitle}</p>}
+      {/* Left: Mobile Hamburger & Title */}
+      <div className="flex items-center gap-2 sm:gap-3 min-w-0 pr-2">
+        {layout && (
+          <button
+            type="button"
+            onClick={layout.toggleSidebar}
+            className="lg:hidden p-2 -ml-1 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer shrink-0"
+            title="Toggle Navigation Menu"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+        )}
+        <div className="min-w-0">
+          <h2 className="text-sm sm:text-base font-black text-slate-900 leading-tight truncate">{title}</h2>
+          {subtitle && <p className="text-[11px] text-slate-500 hidden sm:block mt-0.5 truncate">{subtitle}</p>}
+        </div>
       </div>
 
       {/* Right Controls */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 sm:gap-3 shrink-0">
         {/* WhatsApp Store Config */}
         <button
           onClick={() => {
             setPhoneInput(adminPhone);
             setPhoneModalOpen(true);
           }}
-          className="px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+          className="px-2.5 sm:px-3 py-1.5 rounded-xl border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
           title="Click to view or change store receiving WhatsApp number"
         >
-          <WhatsAppIcon className="w-4 h-4 fill-[#25D366]" />
-          <span className="hidden sm:inline">WhatsApp:</span>
-          <span className="font-mono font-bold">+{adminPhone}</span>
+          <WhatsAppIcon className="w-4 h-4 fill-[#25D366] shrink-0" />
+          <span className="hidden md:inline">WhatsApp:</span>
+          <span className="font-mono font-bold text-[11px] sm:text-xs">+{adminPhone}</span>
         </button>
 
         {/* Refresh button */}
@@ -61,7 +75,7 @@ export const AdminHeader = ({ title, subtitle, onRefresh, refreshing }) => {
           <button
             onClick={onRefresh}
             disabled={refreshing}
-            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200 disabled:opacity-50"
+            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-xl transition-colors border border-slate-200 disabled:opacity-50 shrink-0"
             title="Refresh Data"
           >
             <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-brand-600' : ''}`} />

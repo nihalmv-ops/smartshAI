@@ -214,10 +214,10 @@ export const ProductManagement = () => {
         </div>
       )}
 
-      <main className="p-6 space-y-6 max-w-7xl mx-auto w-full">
+      <main className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full">
         {/* Actions Bar */}
-        <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto flex-1">
+        <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto flex-1">
             <div className="relative w-full sm:w-72">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
@@ -246,7 +246,7 @@ export const ProductManagement = () => {
 
           <button
             onClick={handleOpenCreate}
-            className="w-full md:w-auto px-5 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-98 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-brand-500/25 transition-all cursor-pointer"
+            className="w-full md:w-auto px-5 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-98 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-brand-500/25 transition-all cursor-pointer shrink-0"
           >
             <Plus className="w-4 h-4 stroke-[3]" />
             <span>Add New Product</span>
@@ -256,7 +256,7 @@ export const ProductManagement = () => {
         {/* Products Table */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[620px]">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">Product</th>
@@ -379,10 +379,10 @@ export const ProductManagement = () => {
 
       {/* Product Create / Edit Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 my-8 animate-fadeIn">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h3 className="text-lg font-black text-slate-900">
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl sm:rounded-3xl max-w-lg w-full p-4 sm:p-6 shadow-2xl border border-slate-100 my-4 sm:my-8 animate-fadeIn max-h-[92vh] overflow-y-auto">
+            <div className="flex items-center justify-between pb-3 sm:pb-4 border-b border-slate-100">
+              <h3 className="text-base sm:text-lg font-black text-slate-900">
                 {editingProductId ? 'Edit Product' : 'Add New Product'}
               </h3>
               <button
@@ -393,7 +393,7 @@ export const ProductManagement = () => {
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="space-y-4 mt-4">
+            <form onSubmit={handleSaveProduct} className="space-y-3 sm:space-y-4 mt-3 sm:mt-4">
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Product Name *</label>
                 <input
@@ -401,18 +401,18 @@ export const ProductManagement = () => {
                   required
                   value={productForm.name}
                   onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
                   placeholder="e.g. Farm Fresh Organic Apples"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Category *</label>
                   <select
                     value={productForm.category}
                     onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                   >
                     <option value="grocery">Grocery</option>
                     <option value="dairy">Dairy</option>
@@ -429,13 +429,13 @@ export const ProductManagement = () => {
                     required
                     value={productForm.unit}
                     onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                     placeholder="e.g. 1 kg, 500g, 1L"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Sale Price (₹) *</label>
                   <input
@@ -444,7 +444,7 @@ export const ProductManagement = () => {
                     required
                     value={productForm.price}
                     onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                   />
                 </div>
                 <div>
@@ -454,12 +454,12 @@ export const ProductManagement = () => {
                     min="0"
                     value={productForm.originalPrice}
                     onChange={(e) => setProductForm({ ...productForm, originalPrice: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Stock Units</label>
                   <input
@@ -467,7 +467,7 @@ export const ProductManagement = () => {
                     min="0"
                     value={productForm.stockCount}
                     onChange={(e) => setProductForm({ ...productForm, stockCount: Number(e.target.value) })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                   />
                 </div>
                 <div>
@@ -476,7 +476,7 @@ export const ProductManagement = () => {
                     type="text"
                     value={productForm.badge}
                     onChange={(e) => setProductForm({ ...productForm, badge: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                     placeholder="e.g. Fresh, Popular, Organic"
                   />
                 </div>

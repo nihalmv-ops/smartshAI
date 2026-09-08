@@ -126,19 +126,19 @@ export const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-[#0B1120] text-slate-100">
+    <div className="min-h-screen flex items-center justify-center py-8 sm:py-12 px-3.5 sm:px-6 lg:px-8 bg-[#0B1120] text-slate-100">
       <div className="max-w-md w-full space-y-6">
         {/* Top Branding */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white shadow-xl shadow-brand-500/25 border border-brand-400/30 animate-pulse-soft">
-            <ShieldCheck className="w-9 h-9" />
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-3xl bg-gradient-to-tr from-brand-600 to-indigo-500 text-white shadow-xl shadow-brand-500/25 border border-brand-400/30 animate-pulse-soft">
+            <ShieldCheck className="w-8 h-8 sm:w-9 sm:h-9" />
           </div>
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-brand-500/10 text-brand-400 border border-brand-500/20 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
               Isolated Admin Site • Port 5174
             </div>
-            <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
+            <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">
               SmartMart Admin Portal
             </h2>
             <p className="text-xs text-slate-400 mt-1">
@@ -148,7 +148,7 @@ export const AdminLogin = () => {
         </div>
 
         {/* Auth Container Card */}
-        <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl p-6 sm:p-8 border border-slate-800 shadow-2xl shadow-black/50 space-y-6">
+        <div className="bg-slate-900/90 backdrop-blur-md rounded-3xl p-4 sm:p-8 border border-slate-800 shadow-2xl shadow-black/50 space-y-6">
           {/* Mode Switcher */}
           <div className="grid grid-cols-2 p-1 bg-slate-950/80 rounded-2xl border border-slate-800 text-xs font-bold">
             <button

@@ -96,9 +96,9 @@ export const AIAnalytics = () => {
         </div>
       )}
 
-      <main className="p-6 space-y-6 max-w-7xl mx-auto w-full">
+      <main className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full">
         {/* Low Stock Alerts & Quick Restock Section */}
-        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
@@ -114,7 +114,7 @@ export const AIAnalytics = () => {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4 mt-4">
             {lowStock.length === 0 ? (
               <div className="col-span-full py-12 text-center text-slate-400 text-sm bg-slate-50/50 rounded-2xl border border-dashed border-slate-200">
                 <PackageCheck className="w-8 h-8 text-emerald-500 mx-auto mb-2 opacity-80" />
@@ -155,9 +155,9 @@ export const AIAnalytics = () => {
         </div>
 
         {/* AI Recommended Products & Trending Searches */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Top Recommended Products */}
-          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center gap-2.5 mb-4">
               <div className="w-8 h-8 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-md shadow-brand-500/20">
                 <Sparkles className="w-4 h-4" />

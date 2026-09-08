@@ -92,7 +92,7 @@ export const DashboardOverview = () => {
         refreshing={refreshing}
       />
 
-      <main className="p-6 space-y-6 max-w-7xl mx-auto w-full">
+      <main className="p-3.5 sm:p-6 space-y-4 sm:space-y-6 max-w-7xl mx-auto w-full">
         {/* Urgent Low Stock Banner */}
         {stats.aiAnalytics.lowStockProducts.length > 0 && (
           <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
@@ -119,9 +119,9 @@ export const DashboardOverview = () => {
         )}
 
         {/* Top 4 KPI Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">
           {/* Revenue */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Revenue
@@ -142,7 +142,7 @@ export const DashboardOverview = () => {
           </div>
 
           {/* Orders */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Orders
@@ -165,7 +165,7 @@ export const DashboardOverview = () => {
           </div>
 
           {/* Products */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Products
@@ -188,7 +188,7 @@ export const DashboardOverview = () => {
           </div>
 
           {/* Users */}
-          <div className="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
+          <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs hover:shadow-md transition-shadow">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                 Total Customers
@@ -210,9 +210,9 @@ export const DashboardOverview = () => {
         </div>
 
         {/* 7-Day Revenue Trend & Order Fulfillment */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Revenue Chart */}
-          <div className="lg:col-span-2 bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+          <div className="lg:col-span-2 bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <h3 className="text-base font-bold text-slate-900">7-Day Sales &amp; Revenue Trend</h3>
@@ -265,7 +265,7 @@ export const DashboardOverview = () => {
           </div>
 
           {/* Fulfillment Status Breakdown */}
-          <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
+          <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col justify-between">
             <div>
               <h3 className="text-base font-bold text-slate-900">Order Fulfillment</h3>
               <p className="text-xs text-slate-500 mb-5">Current status distribution</p>
@@ -309,7 +309,7 @@ export const DashboardOverview = () => {
         </div>
 
         {/* Recent Orders Preview */}
-        <div className="bg-white p-5 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl border border-slate-200/80 shadow-xs">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base font-bold text-slate-900">Recent Customer Orders</h3>
@@ -319,13 +319,13 @@ export const DashboardOverview = () => {
               onClick={() => navigate('/orders')}
               className="text-xs font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1 cursor-pointer"
             >
-              <span>View All Orders</span>
+              <span>View All</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto -mx-1 sm:mx-0">
+            <table className="w-full text-left border-collapse min-w-[540px]">
               <thead>
                 <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                   <th className="py-2.5 px-3">Order ID</th>

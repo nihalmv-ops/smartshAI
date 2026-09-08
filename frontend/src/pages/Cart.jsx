@@ -14,12 +14,15 @@ import {
   X,
   CreditCard,
   MapPin,
-  Sparkles
+  Sparkles,
+  Copy,
+  Loader2
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { orderService } from '../services/orderService';
-import { Loader2 } from 'lucide-react';
+import { whatsappService } from '../services/whatsappService';
+import { WhatsAppIcon } from '../components/common/WhatsAppIcon';
 
 export const Cart = ({ navigateTo: propNavigateTo }) => {
   const navigate = useNavigate();
@@ -56,6 +59,8 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [orderPlaced, setOrderPlaced] = useState(false);
   const [orderId, setOrderId] = useState('');
+  const [placedOrderObj, setPlacedOrderObj] = useState(null);
+  const [copiedSummary, setCopiedSummary] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
 
   const freeDeliveryThreshold = 199;
@@ -78,33 +83,37 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   const handlePlaceOrder = async () => {
     setPlacingOrder(true);
     try {
-      if (isAuthenticated) {
-        const orderData = {
-          orderItems: cart.map(item => ({
-            product: item._id || item.id,
-            name: item.name,
-            qty: item.quantity,
-            price: item.price,
-            unit: item.unit || '',
-            image: item.image
-          })),
-          shippingAddress: {
-            fullName: user?.name || 'Customer',
-            address: user?.address || '221B Baker Residency, Indiranagar',
-            city: 'Bengaluru',
-            postalCode: '560038',
-            phone: user?.phone || '+91 98765 43210'
-          },
-          paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment / UPI',
-          itemsPrice: subtotal,
-          deliveryFee: deliveryFee,
-          discount: couponDiscount,
-          totalPrice: finalTotal
-        };
+      const orderData = {
+        orderItems: cart.map(item => ({
+          product: item._id || item.id,
+          name: item.name,
+          qty: item.quantity,
+          price: item.price,
+          unit: item.unit || '',
+          image: item.image
+        })),
+        shippingAddress: {
+          fullName: user?.name || 'Customer',
+          address: user?.address || '221B Baker Residency, Indiranagar',
+          city: 'Bengaluru',
+          postalCode: '560038',
+          phone: user?.phone || '+91 98765 43210'
+        },
+        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment / UPI',
+        itemsPrice: subtotal,
+        deliveryFee: deliveryFee,
+        discount: couponDiscount,
+        totalPrice: finalTotal
+      };
 
+      let finalSavedOrder = null;
+
+      if (isAuthenticated) {
         const res = await orderService.createOrder(orderData);
         if (res && res.order) {
+          finalSavedOrder = res.order;
           setOrderId(res.order._id);
+          setPlacedOrderObj(res.order);
           setOrderPlaced(true);
           clearCart();
         } else {
@@ -112,14 +121,55 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         }
       } else {
         const newOrderId = 'SM-' + Math.floor(100000 + Math.random() * 900000);
+        finalSavedOrder = {
+          ...orderData,
+          _id: newOrderId,
+          createdAt: new Date().toISOString()
+        };
         setOrderId(newOrderId);
+        setPlacedOrderObj(finalSavedOrder);
         setOrderPlaced(true);
         clearCart();
       }
+
+      // Automatically launch WhatsApp with pre-filled order specs
+      try {
+        if (finalSavedOrder) {
+          const waUrl = whatsappService.getAdminOrderUrl(finalSavedOrder);
+          whatsappService.openWhatsApp(waUrl);
+        }
+      } catch (waErr) {
+        console.warn('WhatsApp auto-redirect notice:', waErr);
+      }
     } catch (err) {
       console.warn('Order creation issue:', err.message);
-      const newOrderId = 'SM-' + Math.floor(100000 + Math.random() * 900000);
-      setOrderId(newOrderId);
+      const fallbackOrderId = 'SM-' + Math.floor(100000 + Math.random() * 900000);
+      const fallbackOrder = {
+        _id: fallbackOrderId,
+        orderItems: cart.map(item => ({
+          product: item._id || item.id,
+          name: item.name,
+          qty: item.quantity,
+          price: item.price,
+          unit: item.unit || '',
+          image: item.image
+        })),
+        shippingAddress: {
+          fullName: user?.name || 'Customer',
+          address: user?.address || '221B Baker Residency, Indiranagar',
+          city: 'Bengaluru',
+          postalCode: '560038',
+          phone: user?.phone || '+91 98765 43210'
+        },
+        paymentMethod: paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online Payment / UPI',
+        itemsPrice: subtotal,
+        deliveryFee: deliveryFee,
+        discount: couponDiscount,
+        totalPrice: finalTotal,
+        createdAt: new Date().toISOString()
+      };
+      setOrderId(fallbackOrderId);
+      setPlacedOrderObj(fallbackOrder);
       setOrderPlaced(true);
       clearCart();
     } finally {
@@ -509,6 +559,58 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 <span className="text-slate-500">Payment:</span>
                 <span className="font-bold text-slate-800 uppercase">{paymentMethod}</span>
               </div>
+            </div>
+
+            {/* WhatsApp Store Dispatch CTA */}
+            <div className="p-4 bg-emerald-50/80 border border-emerald-200/90 rounded-2xl text-left space-y-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-sm shadow-emerald-500/30">
+                  <WhatsAppIcon className="w-4 h-4 fill-white" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-emerald-950">Store WhatsApp Dispatch</h4>
+                  <p className="text-[11px] text-emerald-700">Send order specs to store manager for instant confirmation</p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (placedOrderObj) {
+                    const waUrl = whatsappService.getAdminOrderUrl(placedOrderObj);
+                    whatsappService.openWhatsApp(waUrl);
+                  }
+                }}
+                className="w-full py-3 px-4 bg-[#25D366] hover:bg-[#20bd5a] active:scale-[0.99] text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
+              >
+                <WhatsAppIcon className="w-4 h-4 fill-white" />
+                <span>Send Order to Store on WhatsApp</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  if (placedOrderObj) {
+                    const text = whatsappService.formatOrderMessage(placedOrderObj);
+                    navigator.clipboard.writeText(text);
+                    setCopiedSummary(true);
+                    setTimeout(() => setCopiedSummary(false), 2500);
+                  }
+                }}
+                className="w-full py-2 px-3 bg-white hover:bg-emerald-100/50 border border-emerald-200 text-emerald-800 text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-colors"
+              >
+                {copiedSummary ? (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700 font-bold">Summary Copied to Clipboard!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Copy Order Summary</span>
+                  </>
+                )}
+              </button>
             </div>
 
             <div className="space-y-2 pt-2">

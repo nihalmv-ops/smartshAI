@@ -24,12 +24,17 @@ import {
   UploadCloud,
   CheckCircle2,
   Clock,
-  Truck
+  Truck,
+  MessageSquare,
+  Phone,
+  Send
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { productService } from '../services/productService';
 import { orderService } from '../services/orderService';
 import { useAuth } from '../context/AuthContext';
+import { whatsappService } from '../services/whatsappService';
+import { WhatsAppIcon } from '../components/common/WhatsAppIcon';
 
 export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
   const { user } = useAuth();
@@ -37,6 +42,11 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState(null);
+
+  // Store WhatsApp Admin Phone State
+  const [adminPhone, setAdminPhone] = useState(whatsappService.getAdminPhone());
+  const [phoneModalOpen, setPhoneModalOpen] = useState(false);
+  const [phoneInput, setPhoneInput] = useState(whatsappService.getAdminPhone());
 
   // Stats state
   const [stats, setStats] = useState({
@@ -298,6 +308,16 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
     }
   };
 
+  const handleSaveAdminPhone = (e) => {
+    e.preventDefault();
+    if (!phoneInput.trim()) return;
+    const cleaned = whatsappService.cleanPhone(phoneInput);
+    whatsappService.setAdminPhone(cleaned);
+    setAdminPhone(cleaned);
+    setPhoneModalOpen(false);
+    showToast(`Store WhatsApp phone updated to +${cleaned}`);
+  };
+
   // ----------------------------------------------------
   // User Handlers
   // ----------------------------------------------------
@@ -428,6 +448,20 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2 self-stretch sm:self-auto justify-end">
+            {/* WhatsApp Admin Phone Config */}
+            <button
+              onClick={() => {
+                setPhoneInput(adminPhone);
+                setPhoneModalOpen(true);
+              }}
+              className="px-3 py-2 text-xs font-bold text-emerald-800 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+              title="Configure Store Admin WhatsApp Phone Number"
+            >
+              <WhatsAppIcon className="w-3.5 h-3.5 fill-[#25D366]" />
+              <span className="hidden md:inline">WhatsApp:</span>
+              <span className="font-mono font-bold">+{adminPhone}</span>
+            </button>
+
             <button
               onClick={() => {
                 fetchDashboardData();
@@ -992,13 +1026,14 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
                       <th className="py-3 px-3">Items</th>
                       <th className="py-3 px-3">Total Amount</th>
                       <th className="py-3 px-4">Fulfillment Status</th>
+                      <th className="py-3 px-3 text-center">Customer WhatsApp</th>
                       <th className="py-3 px-4 text-right">Details</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 text-xs">
                     {filteredOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-12 text-center text-slate-400">
+                        <td colSpan={8} className="py-12 text-center text-slate-400">
                           No orders found matching your criteria.
                         </td>
                       </tr>
@@ -1012,14 +1047,16 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
                             {new Date(ord.createdAt).toLocaleDateString()}
                           </td>
                           <td className="py-3.5 px-3">
-                            <p className="font-bold text-slate-900">{ord.user?.name || 'Customer'}</p>
-                            <p className="text-[11px] text-slate-400">{ord.user?.email || '-'}</p>
+                            <p className="font-bold text-slate-900">{ord.shippingAddress?.fullName || ord.user?.name || 'Customer'}</p>
+                            <p className="text-[11px] text-slate-500 font-mono">
+                              {ord.shippingAddress?.phone || ord.user?.phone || ord.user?.email || '-'}
+                            </p>
                           </td>
                           <td className="py-3.5 px-3 text-slate-600">
                             {ord.orderItems?.length || 1} items
                           </td>
                           <td className="py-3.5 px-3 font-bold text-slate-900 text-sm">
-                            ₹{ord.totalAmount?.toLocaleString()}
+                            ₹{(ord.totalPrice || ord.totalAmount || 0).toLocaleString()}
                           </td>
                           <td className="py-3.5 px-4">
                             <select
@@ -1036,6 +1073,20 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
                               <option value="Delivered">Delivered</option>
                               <option value="Cancelled">Cancelled</option>
                             </select>
+                          </td>
+                          <td className="py-3.5 px-3 text-center">
+                            {whatsappService.cleanPhone(ord.shippingAddress?.phone || ord.user?.phone) ? (
+                              <button
+                                onClick={() => whatsappService.openWhatsApp(whatsappService.getCustomerChatUrl(ord))}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                                title={`Chat with ${ord.shippingAddress?.fullName || ord.user?.name || 'Customer'} on WhatsApp`}
+                              >
+                                <WhatsAppIcon className="w-3.5 h-3.5 fill-[#25D366]" />
+                                <span>Deal on WhatsApp</span>
+                              </button>
+                            ) : (
+                              <span className="text-[11px] text-slate-400 italic">No phone</span>
+                            )}
                           </td>
                           <td className="py-3.5 px-4 text-right">
                             <button
@@ -1521,12 +1572,35 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
 
             <div className="space-y-4 my-4 max-h-[60vh] overflow-y-auto pr-1">
               {/* Customer Info */}
-              <div className="p-3 bg-slate-50 rounded-xl">
-                <h4 className="text-xs font-bold text-slate-700 uppercase mb-1">Customer</h4>
-                <p className="text-xs text-slate-900 font-semibold">{selectedOrderDetails.user?.name}</p>
-                <p className="text-xs text-slate-500">{selectedOrderDetails.user?.email}</p>
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-100">
+                <div className="flex items-center justify-between mb-1.5">
+                  <h4 className="text-xs font-bold text-slate-700 uppercase">Customer Information</h4>
+                  {whatsappService.cleanPhone(selectedOrderDetails.shippingAddress?.phone || selectedOrderDetails.user?.phone) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        whatsappService.openWhatsApp(
+                          whatsappService.getCustomerChatUrl(selectedOrderDetails)
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-800 text-[11px] font-bold transition-colors cursor-pointer"
+                    >
+                      <WhatsAppIcon className="w-3 h-3 fill-[#25D366]" />
+                      <span>Chat on WhatsApp</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-slate-900 font-bold">
+                  {selectedOrderDetails.shippingAddress?.fullName || selectedOrderDetails.user?.name || 'Customer'}
+                </p>
+                <p className="text-xs text-slate-500 font-mono mt-0.5">
+                  📞 {selectedOrderDetails.shippingAddress?.phone || selectedOrderDetails.user?.phone || 'No phone provided'}
+                </p>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  ✉️ {selectedOrderDetails.user?.email || 'No email'}
+                </p>
                 {selectedOrderDetails.shippingAddress && (
-                  <p className="text-xs text-slate-600 mt-1">
+                  <p className="text-xs text-slate-600 mt-1.5 pt-1.5 border-t border-slate-200/60">
                     📍 {selectedOrderDetails.shippingAddress.address},{' '}
                     {selectedOrderDetails.shippingAddress.city} -{' '}
                     {selectedOrderDetails.shippingAddress.postalCode}
@@ -1534,45 +1608,182 @@ export const AdminDashboard = ({ navigateTo, defaultTab = 'overview' }) => {
                 )}
               </div>
 
+              {/* WhatsApp Quick Deal & Customer Alerts */}
+              {whatsappService.cleanPhone(selectedOrderDetails.shippingAddress?.phone || selectedOrderDetails.user?.phone) && (
+                <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center">
+                      <WhatsAppIcon className="w-3.5 h-3.5 fill-white" />
+                    </div>
+                    <span className="text-xs font-bold text-emerald-950">Quick WhatsApp Customer Alerts</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const custName = selectedOrderDetails.shippingAddress?.fullName || selectedOrderDetails.user?.name || 'Valued Customer';
+                        const ordShort = selectedOrderDetails._id.slice(-6).toUpperCase();
+                        const msg = `Hello *${custName}*! 🚴 Your SmartMart AI order *#${ordShort}* is packed and OUT FOR DELIVERY! Our rider will reach your doorstep in 10-15 minutes.`;
+                        whatsappService.openWhatsApp(whatsappService.getCustomerChatUrl(selectedOrderDetails, msg));
+                      }}
+                      className="p-2 rounded-xl bg-white hover:bg-emerald-100/70 border border-emerald-200 text-emerald-900 text-[11px] font-bold text-left transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <Truck className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Out for Delivery</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const custName = selectedOrderDetails.shippingAddress?.fullName || selectedOrderDetails.user?.name || 'Valued Customer';
+                        const ordShort = selectedOrderDetails._id.slice(-6).toUpperCase();
+                        const msg = `Hello *${custName}*! 🎉 Your SmartMart AI order *#${ordShort}* has been successfully DELIVERED. Thank you for shopping with us!`;
+                        whatsappService.openWhatsApp(whatsappService.getCustomerChatUrl(selectedOrderDetails, msg));
+                      }}
+                      className="p-2 rounded-xl bg-white hover:bg-emerald-100/70 border border-emerald-200 text-emerald-900 text-[11px] font-bold text-left transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Delivered Alert</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const custName = selectedOrderDetails.shippingAddress?.fullName || selectedOrderDetails.user?.name || 'Valued Customer';
+                        const ordShort = selectedOrderDetails._id.slice(-6).toUpperCase();
+                        const msg = `Hi *${custName}*, our delivery partner is in your area for order *#${ordShort}*. Could you please share a nearby landmark or live location? Thank you!`;
+                        whatsappService.openWhatsApp(whatsappService.getCustomerChatUrl(selectedOrderDetails, msg));
+                      }}
+                      className="p-2 rounded-xl bg-white hover:bg-emerald-100/70 border border-emerald-200 text-emerald-900 text-[11px] font-bold text-left transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                      <span>Ask Landmark</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Ordered Items */}
               <div>
                 <h4 className="text-xs font-bold text-slate-700 uppercase mb-2">Items Ordered</h4>
                 <div className="space-y-2">
-                  {selectedOrderDetails.orderItems?.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-2 rounded-lg border border-slate-100 text-xs"
-                    >
-                      <div className="flex items-center gap-2">
-                        {item.image && (
-                          <img src={item.image} alt={item.name} className="w-8 h-8 object-cover rounded" />
-                        )}
-                        <div>
-                          <p className="font-bold text-slate-800">{item.name}</p>
-                          <p className="text-[11px] text-slate-500">Qty: {item.quantity}</p>
+                  {selectedOrderDetails.orderItems?.map((item, idx) => {
+                    const qty = item.qty || item.quantity || 1;
+                    return (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-2 rounded-lg border border-slate-100 text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          {item.image && (
+                            <img src={item.image} alt={item.name} className="w-8 h-8 object-cover rounded" />
+                          )}
+                          <div>
+                            <p className="font-bold text-slate-800">{item.name}</p>
+                            <p className="text-[11px] text-slate-500">Qty: {qty} {item.unit ? `(${item.unit})` : ''}</p>
+                          </div>
                         </div>
+                        <span className="font-bold text-slate-900">
+                          ₹{(item.price * qty).toLocaleString()}
+                        </span>
                       </div>
-                      <span className="font-bold text-slate-900">
-                        ₹{(item.price * item.quantity).toLocaleString()}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
               {/* Total Summary */}
               <div className="pt-2 border-t border-slate-100 flex justify-between items-center text-sm font-black text-slate-900">
                 <span>Total Amount</span>
-                <span className="text-brand-600">₹{selectedOrderDetails.totalAmount?.toLocaleString()}</span>
+                <span className="text-brand-600">
+                  ₹{(selectedOrderDetails.totalPrice || selectedOrderDetails.totalAmount || 0).toLocaleString()}
+                </span>
               </div>
             </div>
 
             <button
               onClick={() => setSelectedOrderDetails(null)}
-              className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl"
+              className="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors"
             >
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* =================================================================== */}
+      {/* ADMIN WHATSAPP PHONE NUMBER CONFIG MODAL                            */}
+      {/* =================================================================== */}
+      {phoneModalOpen && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 animate-fadeIn">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-emerald-500 text-white flex items-center justify-center shadow-md shadow-emerald-500/20">
+                  <WhatsAppIcon className="w-4 h-4 fill-white" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900">Admin WhatsApp Number</h3>
+                  <p className="text-xs text-slate-500">Where customer order notifications are sent</p>
+                </div>
+              </div>
+              <button
+                onClick={() => setPhoneModalOpen(false)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveAdminPhone} className="space-y-4 my-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  WhatsApp Phone Number (with Country Code)
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    required
+                    value={phoneInput}
+                    onChange={(e) => setPhoneInput(e.target.value)}
+                    placeholder="e.g. 919876543210 or 9876543210"
+                    className="w-full pl-10 pr-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  Enter with country code (e.g. 91 for India). Standard 10-digit numbers will auto-prefix 91.
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl text-xs text-emerald-800 space-y-1">
+                <p className="font-bold flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                  How WhatsApp Order Alerts Work:
+                </p>
+                <p className="text-[11px] text-emerald-700 leading-relaxed">
+                  When a customer checks out, order items, customer address, and price are pre-formatted for direct WhatsApp communication, so you can confirm and dispatch immediately!
+                </p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setPhoneModalOpen(false)}
+                  className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-md transition-all flex items-center gap-1.5"
+                >
+                  <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <span>Save Phone Number</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

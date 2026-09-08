@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Package, Clock, CheckCircle2, Truck, AlertCircle, ArrowRight, ShoppingBag, MapPin, Calendar } from 'lucide-react';
 import { orderService } from '../services/orderService';
 import { useAuth } from '../context/AuthContext';
+import { whatsappService } from '../services/whatsappService';
+import { WhatsAppIcon } from '../components/common/WhatsAppIcon';
 
 export const Orders = ({ navigateTo }) => {
   const { user } = useAuth();
@@ -194,8 +196,22 @@ export const Orders = ({ navigateTo }) => {
                       {order.shippingAddress?.address}, {order.shippingAddress?.city}
                     </span>
                   </div>
-                  <div className="font-semibold text-slate-600">
-                    Payment Method: <span className="text-brand-600 font-bold">{order.paymentMethod}</span>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <div className="font-semibold text-slate-600">
+                      Payment: <span className="text-brand-600 font-bold">{order.paymentMethod}</span>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const waUrl = whatsappService.getAdminOrderUrl(order);
+                        whatsappService.openWhatsApp(waUrl);
+                      }}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 font-bold text-xs transition-all cursor-pointer shadow-2xs"
+                      title="Contact Store Support on WhatsApp about this order"
+                    >
+                      <WhatsAppIcon className="w-3.5 h-3.5 fill-[#25D366]" />
+                      <span>Contact Store on WhatsApp</span>
+                    </button>
                   </div>
                 </div>
               </div>

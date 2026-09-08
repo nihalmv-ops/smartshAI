@@ -7,6 +7,7 @@ import { AdminLayout } from './components/layout/AdminLayout';
 import { AdminLogin } from './pages/AdminLogin';
 import { DashboardOverview } from './pages/DashboardOverview';
 import { ProductManagement } from './pages/ProductManagement';
+import { CategoryManagement } from './pages/CategoryManagement';
 import { OrderManagement } from './pages/OrderManagement';
 import { UserManagement } from './pages/UserManagement';
 import { AIAnalytics } from './pages/AIAnalytics';
@@ -30,6 +31,7 @@ export const App = () => {
           >
             <Route index element={<DashboardOverview />} />
             <Route path="products" element={<ProductManagement />} />
+            <Route path="categories" element={<CategoryManagement />} />
             <Route path="orders" element={<OrderManagement />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="analytics" element={<AIAnalytics />} />

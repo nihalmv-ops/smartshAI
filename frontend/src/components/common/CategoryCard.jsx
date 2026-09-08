@@ -4,7 +4,7 @@ import { ChevronRight } from 'lucide-react';
 export const CategoryCard = ({ category, onSelectCategory }) => {
   return (
     <div
-      onClick={() => onSelectCategory(category.id)}
+      onClick={() => onSelectCategory(category.slug || category.id)}
       className={`group relative rounded-xl sm:rounded-2xl p-2.5 sm:p-4 bg-gradient-to-b ${category.bgGradient} border ${category.borderColor} shadow-xs hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between overflow-hidden`}
     >
       {/* Category Image */}

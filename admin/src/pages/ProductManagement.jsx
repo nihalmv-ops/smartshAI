@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Search,
   Plus,
@@ -8,14 +9,17 @@ import {
   X,
   Loader2,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Layers
 } from 'lucide-react';
 import { productService } from '../services/productService';
+import { categoryService, defaultCategories } from '../services/categoryService';
 import { adminService } from '../services/adminService';
 import { AdminHeader } from '../components/layout/AdminHeader';
 
 export const ProductManagement = () => {
   const [products, setProducts] = useState([]);
+  const [categories, setCategories] = useState(defaultCategories);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [productSearch, setProductSearch] = useState('');
@@ -50,9 +54,16 @@ export const ProductManagement = () => {
   const fetchProducts = async () => {
     try {
       setRefreshing(true);
-      const res = await productService.getAllProducts();
-      if (res && res.products) {
-        setProducts(res.products);
+      const [prodRes, catData] = await Promise.allSettled([
+        productService.getAllProducts(),
+        categoryService.getAllCategories()
+      ]);
+
+      if (prodRes.status === 'fulfilled' && prodRes.value?.products) {
+        setProducts(prodRes.value.products);
+      }
+      if (catData.status === 'fulfilled' && catData.value && catData.value.length > 0) {
+        setCategories(catData.value);
       }
     } catch (err) {
       showToast(err.message || 'Failed to load products', 'error');
@@ -232,25 +243,34 @@ export const ProductManagement = () => {
             <select
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="w-full sm:w-auto px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none"
+              className="w-full sm:w-auto px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-700 font-semibold focus:outline-none capitalize"
             >
               <option value="all">All Categories</option>
-              <option value="grocery">Grocery</option>
-              <option value="dairy">Dairy</option>
-              <option value="fruits">Fruits</option>
-              <option value="vegetables">Vegetables</option>
-              <option value="snacks">Snacks</option>
-              <option value="beverages">Beverages</option>
+              {categories.map((c) => (
+                <option key={c.slug || c.id} value={c.slug || c.id}>
+                  {c.name}
+                </option>
+              ))}
             </select>
           </div>
 
-          <button
-            onClick={handleOpenCreate}
-            className="w-full md:w-auto px-5 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-98 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-brand-500/25 transition-all cursor-pointer shrink-0"
-          >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Add New Product</span>
-          </button>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full md:w-auto">
+            <Link
+              to="/categories"
+              className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 border border-slate-300/80 transition-colors cursor-pointer shrink-0"
+            >
+              <Layers className="w-4 h-4 text-slate-600" />
+              <span>Categories ({categories.length})</span>
+            </Link>
+
+            <button
+              onClick={handleOpenCreate}
+              className="w-full sm:w-auto px-5 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-98 text-white text-xs sm:text-sm font-bold rounded-xl flex items-center justify-center gap-2 shadow-md shadow-brand-500/25 transition-all cursor-pointer shrink-0"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Add New Product</span>
+            </button>
+          </div>
         </div>
 
         {/* Products Table */}
@@ -412,14 +432,13 @@ export const ProductManagement = () => {
                   <select
                     value={productForm.category}
                     onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
-                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none capitalize"
                   >
-                    <option value="grocery">Grocery</option>
-                    <option value="dairy">Dairy</option>
-                    <option value="fruits">Fruits</option>
-                    <option value="vegetables">Vegetables</option>
-                    <option value="snacks">Snacks</option>
-                    <option value="beverages">Beverages</option>
+                    {categories.map((c) => (
+                      <option key={c.slug || c.id} value={c.slug || c.id}>
+                        {c.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div>

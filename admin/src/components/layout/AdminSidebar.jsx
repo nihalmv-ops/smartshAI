@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import {
   TrendingUp,
   Package,
+  Layers,
   ShoppingBag,
   Users,
   Sparkles,
@@ -20,6 +21,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const navItems = [
     { to: '/', label: 'Overview', icon: TrendingUp },
     { to: '/products', label: 'Products', icon: Package },
+    { to: '/categories', label: 'Categories', icon: Layers },
     { to: '/orders', label: 'Orders & WhatsApp', icon: ShoppingBag },
     { to: '/users', label: 'Users & Staff', icon: Users },
     { to: '/analytics', label: 'AI Analytics', icon: Sparkles },

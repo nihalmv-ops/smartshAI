@@ -1,9 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowRight, Sparkles, ChevronRight } from 'lucide-react';
-import { categories } from '../data/categories';
+import { categories as defaultCategories } from '../data/categories';
 import { products } from '../data/products';
+import { productService } from '../services/productService';
 
 export const Categories = ({ navigateTo }) => {
+  const [categoryList, setCategoryList] = useState(defaultCategories);
+
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const data = await productService.getCategories();
+        if (data && data.length > 0) {
+          setCategoryList(data);
+        }
+      } catch (err) {
+        console.warn('Using local categories fallback:', err);
+      }
+    };
+    loadCategories();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] py-6 sm:py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,13 +48,14 @@ export const Categories = ({ navigateTo }) => {
 
         {/* Categories Big Cards Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {categories.map((cat) => {
-            const catProducts = products.filter(p => p.category.toLowerCase() === cat.id.toLowerCase());
+          {categoryList.map((cat) => {
+            const catId = cat.slug || cat.id;
+            const catProducts = products.filter(p => p.category?.toLowerCase() === catId.toLowerCase());
             return (
               <div
-                key={cat.id}
-                onClick={() => navigateTo('products', { category: cat.id })}
-                className={`group rounded-3xl p-4 sm:p-6 bg-gradient-to-br ${cat.bgGradient} border ${cat.borderColor} shadow-soft hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between`}
+                key={cat._id || catId}
+                onClick={() => navigateTo('products', { category: catId })}
+                className={`group rounded-3xl p-4 sm:p-6 bg-gradient-to-br ${cat.bgGradient || 'from-emerald-50 to-teal-50/60'} border ${cat.borderColor || 'border-emerald-100'} shadow-soft hover:shadow-card-hover transition-all duration-300 cursor-pointer flex flex-col justify-between`}
               >
                 <div>
                   <div className="flex items-center justify-between mb-3 sm:mb-4">

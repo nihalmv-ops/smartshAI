@@ -715,7 +715,7 @@ export const CategoryManagement = () => {
 
                 {/* 1-Click High-Res Presets */}
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-400 mb-1.5 flex items-center gap-1">
+                  <label className="flex items-center gap-1 text-[11px] font-bold text-slate-400 mb-1.5">
                     <Sparkles className="w-3 h-3 text-amber-400" />
                     <span>Quick 1-Click Grocery Presets:</span>
                   </label>

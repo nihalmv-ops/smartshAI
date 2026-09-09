@@ -10,16 +10,6 @@ body {
   background-color: #F8FAFC;
   color: #1e293b;
 }
-
-/* Hide scrollbars for clean touch sliders */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  scrollbar-width: none;
-}
-
-/* Custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

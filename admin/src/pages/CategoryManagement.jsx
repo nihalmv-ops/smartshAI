@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Layers,
   Plus,
@@ -145,7 +145,7 @@ export const CategoryManagement = () => {
     setTimeout(() => setToast(null), 3500);
   };
 
-  const fetchCategories = async () => {
+  const fetchCategories = useCallback(async () => {
     try {
       const data = await categoryService.getAllCategories();
       setCategories(data || defaultCategories);
@@ -157,11 +157,11 @@ export const CategoryManagement = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+  }, [fetchCategories]);
 
   const handleRefresh = () => {
     setRefreshing(true);
@@ -310,10 +310,10 @@ export const CategoryManagement = () => {
       } else {
         const res = await categoryService.createCategory(formData);
         showToast(`New category '${formData.name}' created successfully!`);
-        const newCat = res.category || {
+        const newCat = res?.category || {
           ...formData,
           _id: `cat_${Date.now()}`,
-          id: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-')
+          id: formData.slug || (formData.name ? formData.name.toLowerCase().replace(/\s+/g, '-') : 'category')
         };
         setCategories((prev) => [newCat, ...prev]);
       }
@@ -828,7 +828,7 @@ export const CategoryManagement = () => {
             <div>
               <h4 className="text-base font-bold text-white">Delete Category?</h4>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                Are you sure you want to delete <strong className="text-white">'{deleteTarget.name}'</strong>?
+                Are you sure you want to delete <strong className="text-white">&ldquo;{deleteTarget.name}&rdquo;</strong>?
                 This action cannot be undone.
               </p>
             </div>

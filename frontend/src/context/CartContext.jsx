@@ -236,6 +236,7 @@ export const CartProvider = ({ children }) => {
     0
   );
   const itemsDiscount = originalSubtotal - subtotal;
+  const couponDiscount = Math.round((subtotal * (coupon?.discountPercent || 0)) / 100);
   const freeDeliveryThreshold = settings.freeDeliveryThreshold ?? 199;
   const baseDeliveryFee = settings.deliveryFee ?? 25;
   const isFreeDelivery = subtotal === 0 || (freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold);

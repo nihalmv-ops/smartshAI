@@ -49,6 +49,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
     applyCoupon, 
     removeCoupon, 
     deliveryFee, 
+    freeDeliveryThreshold,
     finalTotal 
   } = useCart();
 
@@ -63,8 +64,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('cod');
 
-  const freeDeliveryThreshold = 199;
-  const amountForFreeDelivery = Math.max(0, freeDeliveryThreshold - subtotal);
+  const amountForFreeDelivery = Math.max(0, (freeDeliveryThreshold || 199) - subtotal);
 
   const handleApplyCoupon = (e) => {
     e.preventDefault();
@@ -444,7 +444,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
               </div>
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900">Delivery &amp; Payment</h3>
-                <p className="text-xs text-slate-500">SmartMart AI Rapid Checkout</p>
+                <p className="text-xs text-slate-500">Skyline Mart Rapid Checkout</p>
               </div>
             </div>
 

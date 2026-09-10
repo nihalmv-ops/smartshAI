@@ -348,7 +348,7 @@ export const OrderManagement = () => {
                       onClick={() => {
                         const custName = selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name || 'Customer';
                         const ordShort = selectedOrder._id.slice(-6).toUpperCase();
-                        const msg = `Hello *${custName}*! 🚴 Your SmartMart AI order *#${ordShort}* is packed and OUT FOR DELIVERY! Our express rider will reach your address in 10-15 minutes.`;
+                        const msg = `Hello *${custName}*! 🚴 Your Skyline Mart order *#${ordShort}* is packed and OUT FOR DELIVERY! Our express rider will reach your address in 10-15 minutes.`;
                         whatsappService.openWhatsApp(whatsappService.getCustomerChatUrl(selectedOrder, msg));
                       }}
                       className="p-2 rounded-xl bg-white hover:bg-emerald-100/70 border border-emerald-200 text-emerald-900 text-[11px] font-bold text-left transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
@@ -362,7 +362,7 @@ export const OrderManagement = () => {
                       onClick={() => {
                         const custName = selectedOrder.shippingAddress?.fullName || selectedOrder.user?.name || 'Customer';
                         const ordShort = selectedOrder._id.slice(-6).toUpperCase();
-                        const msg = `Hello *${custName}*! 🎉 Your SmartMart AI order *#${ordShort}* has been successfully DELIVERED. Thank you for shopping with us!`;
+                        const msg = `Hello *${custName}*! 🎉 Your Skyline Mart order *#${ordShort}* has been successfully DELIVERED. Thank you for shopping with us!`;
                         whatsappService.openWhatsApp(whatsappService.getCustomerChatUrl(selectedOrder, msg));
                       }}
                       className="p-2 rounded-xl bg-white hover:bg-emerald-100/70 border border-emerald-200 text-emerald-900 text-[11px] font-bold text-left transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"

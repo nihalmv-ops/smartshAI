@@ -158,7 +158,7 @@ export const AdminLogin = ({ navigateTo: propNavigateTo }) => {
               Restricted Portal • Authorized Staff Only
             </div>
             <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-              SmartMart Admin Portal
+              Skyline Mart Admin Portal
             </h2>
             <p className="text-xs text-slate-400 mt-1">
               Store management, live inventory dispatch &amp; AI analytics

@@ -139,7 +139,7 @@ export const AdminLogin = () => {
               Isolated Admin Site • Port 5174
             </div>
             <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">
-              SmartMart Admin Portal
+              Skyline Mart Admin Portal
             </h2>
             <p className="text-xs text-slate-400 mt-1">
               Store dispatch, real-time inventory &amp; WhatsApp customer deals

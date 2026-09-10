@@ -93,7 +93,7 @@ export const Register = ({ navigateTo }) => {
             Create Your Account
           </h2>
           <p className="text-xs sm:text-sm text-slate-500">
-            Join SmartMart AI for 15-minute grocery delivery &amp; daily deals
+            Join Skyline Mart for 15-minute grocery delivery &amp; daily deals
           </p>
         </div>
 
@@ -105,7 +105,7 @@ export const Register = ({ navigateTo }) => {
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-lg font-bold text-slate-900">Account Created!</h3>
-              <p className="text-xs text-slate-500">Signing you into SmartMart AI...</p>
+              <p className="text-xs text-slate-500">Signing you into Skyline Mart...</p>
             </div>
           ) : (
             <div className="space-y-4">

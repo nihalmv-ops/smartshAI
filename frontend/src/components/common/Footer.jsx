@@ -33,7 +33,7 @@ export const Footer = ({ navigateTo }) => {
                 <ShoppingCart className="w-5 h-5" />
               </div>
               <div>
-                <span className="text-2xl font-extrabold text-white tracking-tight">Smart<span className="text-brand-400">Mart</span></span>
+                <span className="text-2xl font-extrabold text-white tracking-tight">Skyline <span className="text-brand-400">Mart</span></span>
                 <p className="text-[10px] font-semibold tracking-wider text-slate-400 uppercase">Fresh • Fast • Reliable</p>
               </div>
             </div>
@@ -129,7 +129,7 @@ export const Footer = ({ navigateTo }) => {
 
         {/* Bottom Bar matching mockup */}
         <div className="pt-6 sm:pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-500 text-center sm:text-left">
-          <p>© 2026 SmartMart AI. All rights reserved.</p>
+          <p>© 2026 Skyline Mart. All rights reserved.</p>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-6">
             <a href="#terms" className="hover:text-slate-400 transition-colors">Terms & Conditions</a>
             <span>•</span>

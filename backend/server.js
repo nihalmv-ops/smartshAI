@@ -12,6 +12,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import cartRoutes from './routes/cartRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import settingsRoutes from './routes/settingsRoutes.js';
 
 // Middleware imports
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
@@ -59,7 +60,7 @@ if (process.env.NODE_ENV !== 'production') {
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    service: 'SmartMart AI Supermarket Backend API',
+    service: 'Skyline Mart Backend API',
     timestamp: new Date().toISOString(),
     version: '1.0.0'
   });
@@ -73,13 +74,14 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/settings', settingsRoutes);
 
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Fallback Route
 app.get('/', (req, res) => {
-  res.send('SmartMart AI API Server is running. Access endpoints via /api/...');
+  res.send('Skyline Mart API Server is running. Access endpoints via /api/...');
 });
 
 // Custom Error Handling Middlewares
@@ -89,7 +91,7 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 
 const server = app.listen(PORT, () => {
-  console.log(`🚀 SmartMart AI Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  console.log(`🚀 Skyline Mart Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
   console.log(`📡 Health Check available at http://localhost:${PORT}/api/health`);
 });
 

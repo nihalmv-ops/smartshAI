@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { cartService } from '../services/cartService';
+import { settingsService, defaultSettings } from '../services/settingsService';
 import { useAuth } from './AuthContext';
 
 const CartContext = createContext();
@@ -40,7 +41,23 @@ export const CartProvider = ({ children }) => {
 
   const [coupon, setCoupon] = useState({ code: '', discountPercent: 0 });
   const [toastMessage, setToastMessage] = useState(null);
+  const [settings, setSettings] = useState(defaultSettings);
   const isSyncingRef = useRef(false);
+
+  // Fetch live store settings (delivery fee, free delivery threshold)
+  useEffect(() => {
+    let isMounted = true;
+    settingsService.getSettings().then((data) => {
+      if (isMounted && data) {
+        setSettings(data);
+      }
+    }).catch((err) => {
+      console.warn('Could not load live store settings:', err.message);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Save cart to localStorage
   useEffect(() => {
@@ -219,8 +236,10 @@ export const CartProvider = ({ children }) => {
     0
   );
   const itemsDiscount = originalSubtotal - subtotal;
-  const couponDiscount = Math.round((subtotal * coupon.discountPercent) / 100);
-  const deliveryFee = subtotal > 199 || subtotal === 0 ? 0 : 25;
+  const freeDeliveryThreshold = settings.freeDeliveryThreshold ?? 199;
+  const baseDeliveryFee = settings.deliveryFee ?? 25;
+  const isFreeDelivery = subtotal === 0 || (freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold);
+  const deliveryFee = isFreeDelivery ? 0 : baseDeliveryFee;
   const finalTotal = Math.max(0, subtotal - couponDiscount + deliveryFee);
 
   return (
@@ -242,6 +261,9 @@ export const CartProvider = ({ children }) => {
         applyCoupon,
         removeCoupon,
         deliveryFee,
+        baseDeliveryFee,
+        freeDeliveryThreshold,
+        deliverySettings: settings,
         finalTotal,
         toastMessage
       }}

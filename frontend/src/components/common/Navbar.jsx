@@ -20,7 +20,7 @@ import { useAuth } from '../../context/AuthContext';
 import { productService } from '../../services/productService';
 
 export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
-  const { totalItems } = useCart();
+  const { totalItems, freeDeliveryThreshold } = useCart();
   const { totalWishlist } = useWishlist();
   const { user, isAuthenticated, logout } = useAuth();
 
@@ -91,7 +91,7 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
       {/* Top Banner (Optional small notification) */}
       <div className="bg-gradient-to-r from-brand-600 via-brand-500 to-sky-500 text-white text-xs py-1.5 px-4 text-center font-medium hidden md:flex items-center justify-center gap-2">
         <Sparkles className="w-3.5 h-3.5 animate-spin-slow" />
-        <span>Get <strong>20% OFF</strong> on your first grocery order with code <strong>FRESH20</strong> • Free Delivery on orders over ₹199</span>
+        <span>Get <strong>20% OFF</strong> on your first grocery order with code <strong>FRESH20</strong> • Free Delivery on orders over ₹{freeDeliveryThreshold ?? 199}</span>
       </div>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -107,8 +107,7 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
             </div>
             <div>
               <div className="flex items-center gap-1">
-                <span className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight">Smart<span className="text-brand-500">Mart</span></span>
-                <span className="px-1 py-0.2 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 rounded">AI</span>
+                <span className="text-lg sm:text-2xl font-extrabold text-slate-900 tracking-tight">Skyline <span className="text-brand-500">Mart</span></span>
               </div>
               <p className="text-[9px] sm:text-[11px] font-semibold tracking-wider text-slate-400 uppercase hidden xs:block">Fresh • Fast • Reliable</p>
             </div>
@@ -385,7 +384,7 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
                 }}
                 className="w-full py-2.5 bg-brand-500 text-white rounded-xl font-semibold text-sm shadow-md text-center"
               >
-                Sign In to SmartMart AI
+                Sign In to Skyline Mart
               </button>
             ) : (
               <div className="space-y-2">

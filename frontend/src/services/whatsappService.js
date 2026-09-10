@@ -75,7 +75,7 @@ export const whatsappService = {
         });
 
     return (
-`🛒 *NEW ORDER RECEIVED - SMARTMART AI* 🛒
+`🛒 *NEW ORDER RECEIVED - SKYLINE MART* 🛒
 ━━━━━━━━━━━━━━━━━━━━━━━━
 📋 *Order ID*: #${orderId}
 📅 *Time*: ${orderDate}
@@ -118,7 +118,7 @@ ${itemsText}
 
     const defaultMsg = customMessage || (
 `Hello *${customerName}*! 👋
-This is from *SmartMart AI Supermarket*.
+This is from *Skyline Mart*.
 Your order *#${orderId}* (Total: ₹${(order?.totalPrice || order?.totalAmount || 0).toLocaleString()}) is currently *${order?.status || 'Processing'}*.
 We are preparing your items for delivery. Please let us know if you have any questions!`
     );

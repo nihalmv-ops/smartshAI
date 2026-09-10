@@ -51,7 +51,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
             </div>
             <div>
               <h1 className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
-                SmartMart <span className="text-brand-400">Admin</span>
+                Skyline Mart <span className="text-brand-400">Admin</span>
               </h1>
               <p className="text-[10px] text-slate-400 font-medium">Control Center</p>
             </div>

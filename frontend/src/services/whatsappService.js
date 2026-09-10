@@ -1,4 +1,4 @@
-// SmartMart AI WhatsApp Order Messaging Service
+// Skyline Mart Direct WhatsApp Order Messaging Service
 
 const STORAGE_KEY = 'smartmart_admin_whatsapp_phone';
 export const DEFAULT_ADMIN_PHONE = '919876543210';
@@ -30,7 +30,7 @@ export const whatsappService = {
    */
   cleanPhone: (phone) => {
     if (!phone) return '';
-    let cleaned = phone.replace(/[^0-9]/g, '');
+    let cleaned = phone.toString().replace(/\D/g, '');
     // If standard 10 digit Indian number without country code, prepend 91
     if (cleaned.length === 10) {
       cleaned = '91' + cleaned;
@@ -39,70 +39,72 @@ export const whatsappService = {
   },
 
   /**
-   * Generates a beautifully formatted WhatsApp order notification for the Store Admin
+   * Clean, formatted customer order receipt matching store owner specs
    */
-  formatOrderMessage: (order) => {
+  formatCustomerOrderMessage: (order) => {
     if (!order) return '';
 
-    const orderId = (order._id || order.id || 'NEW-ORDER').toString().slice(-8).toUpperCase();
-    const customerName = order.shippingAddress?.fullName || order.user?.name || 'Valued Customer';
-    const customerPhone = order.shippingAddress?.phone || order.user?.phone || 'Not provided';
+    const orderId = (order._id || order.id || 'NEW').toString().slice(-8).toUpperCase();
+    const customerName = order.shippingAddress?.fullName || order.user?.name || 'Customer';
+    const customerPhone = order.shippingAddress?.phone || order.user?.phone || '';
     const address = order.shippingAddress?.address || 'Doorstep Delivery';
     const city = order.shippingAddress?.city ? `, ${order.shippingAddress.city}` : '';
     const postalCode = order.shippingAddress?.postalCode ? ` - ${order.shippingAddress.postalCode}` : '';
+    const deliveryNotes = order.deliveryNotes || '';
     const payment = order.paymentMethod || 'Cash on Delivery';
-    const total = (order.totalPrice || order.totalAmount || 0).toLocaleString();
+
     const items = order.orderItems || [];
-
-    // Format list of items
-    const itemsText = items.length > 0
-      ? items.map((item, idx) => {
+    const itemsFormatted = items.length > 0
+      ? items.map((item) => {
           const qty = item.qty || item.quantity || 1;
-          const price = item.price ? `(₹${item.price * qty})` : '';
-          const unit = item.unit ? ` [${item.unit}]` : '';
-          return `${idx + 1}. *${item.name}* x ${qty}${unit} ${price}`;
-        }).join('\n')
-      : '• Standard grocery items package';
+          const price = item.price ? `₹${item.price * qty}` : '₹0';
+          return `Product: ${item.name}\nQuantity: ${qty}\nPrice: ${price}`;
+        }).join('\n\n')
+      : 'Product: Assorted Groceries\nQuantity: 1\nPrice: ₹' + (order.totalPrice || 0);
 
-    const orderDate = order.createdAt
-      ? new Date(order.createdAt).toLocaleString('en-IN', {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        })
-      : new Date().toLocaleString('en-IN', {
-          dateStyle: 'medium',
-          timeStyle: 'short'
-        });
+    const subtotal = order.itemsPrice !== undefined ? `₹${order.itemsPrice}` : `₹${order.totalPrice || 0}`;
+    const delivery = order.deliveryFee === 0 ? 'FREE' : `₹${order.deliveryFee || 0}`;
+    const discount = order.discount > 0 ? `₹${order.discount}` : '₹0';
+    const total = `₹${order.totalPrice || 0}`;
 
-    return (
-`🛒 *NEW ORDER RECEIVED - SKYLINE MART* 🛒
-━━━━━━━━━━━━━━━━━━━━━━━━
-📋 *Order ID*: #${orderId}
-📅 *Time*: ${orderDate}
-👤 *Customer*: ${customerName}
-📞 *Phone*: ${customerPhone}
-📍 *Delivery Address*: ${address}${city}${postalCode}
+    let msg = `Hello Skyline Mart 👋\nI would like to place an order.\n\nOrder Details:\n${itemsFormatted}\n\nSubtotal: ${subtotal}\nDelivery: ${delivery}\n`;
+    if (order.discount > 0) {
+      msg += `Discount: ${discount}\n`;
+    }
+    msg += `Total: ${total}\n\nCustomer Details:\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${address}${city}${postalCode}\n`;
+    if (deliveryNotes) {
+      msg += `Optional Delivery Notes: ${deliveryNotes}\n`;
+    }
+    msg += `Payment Method: ${payment}\nOrder ID: #${orderId}\n\nPlease confirm my order. Thank you!`;
 
-📦 *ITEMS ORDERED*:
-${itemsText}
-
-━━━━━━━━━━━━━━━━━━━━━━━━
-💰 *TOTAL AMOUNT*: ₹${total}
-💳 *Payment Mode*: ${payment}
-🚚 *Fulfillment*: 15-Minute Express Delivery
-━━━━━━━━━━━━━━━━━━━━━━━━
-⚡ *Action Required*: Please review and confirm this order dispatch!`
-    );
+    return msg;
   },
 
   /**
-   * Creates direct WhatsApp link to send the customer's order to the Admin
+   * Generates formatted WhatsApp order notification for the Store Admin
+   */
+  formatOrderMessage: (order) => {
+    return whatsappService.formatCustomerOrderMessage(order);
+  },
+
+  /**
+   * Creates direct WhatsApp link to send the customer's order to a specific target phone
+   */
+  getWhatsAppOrderUrl: (order, targetPhone = '') => {
+    const phone =
+      targetPhone ||
+      order?.whatsappContact?.phoneNumber ||
+      whatsappService.getAdminPhone();
+    const message = whatsappService.formatCustomerOrderMessage(order);
+    const cleaned = whatsappService.cleanPhone(phone);
+    return `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
+  },
+
+  /**
+   * Creates direct WhatsApp link to send the customer's order to the default Admin
    */
   getAdminOrderUrl: (order) => {
-    const adminPhone = whatsappService.getAdminPhone();
-    const message = whatsappService.formatOrderMessage(order);
-    const cleaned = whatsappService.cleanPhone(adminPhone);
-    return `https://wa.me/${cleaned}?text=${encodeURIComponent(message)}`;
+    return whatsappService.getWhatsAppOrderUrl(order);
   },
 
   /**
@@ -116,12 +118,15 @@ ${itemsText}
     const orderId = (order._id || order.id || '').toString().slice(-8).toUpperCase();
     const customerName = order?.shippingAddress?.fullName || order?.user?.name || 'Customer';
 
-    const defaultMsg = customMessage || (
-`Hello *${customerName}*! 👋
-This is from *Skyline Mart*.
-Your order *#${orderId}* (Total: ₹${(order?.totalPrice || order?.totalAmount || 0).toLocaleString()}) is currently *${order?.status || 'Processing'}*.
-We are preparing your items for delivery. Please let us know if you have any questions!`
-    );
+    const defaultMsg =
+      customMessage ||
+      `Hello *${customerName}*! 👋\nThis is from *Skyline Mart*.\nYour order *#${orderId}* (Total: ₹${(
+        order?.totalPrice ||
+        order?.totalAmount ||
+        0
+      ).toLocaleString()}) is currently *${
+        order?.status || 'Processing'
+      }*.\nWe are preparing your items for delivery. Please let us know if you have any questions!`;
 
     return `https://wa.me/${cleanCustomer}?text=${encodeURIComponent(defaultMsg)}`;
   },
@@ -134,4 +139,3 @@ We are preparing your items for delivery. Please let us know if you have any que
     window.open(url, '_blank', 'noopener,noreferrer');
   }
 };
-

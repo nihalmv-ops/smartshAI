@@ -45,3 +45,21 @@ export const admin = (req, res, next) => {
     res.status(403).json({ success: false, message: 'Access denied: Admin authorization required' });
   }
 };
+
+// Optional Protect: Decodes token if provided, otherwise continues as guest
+export const optionalProtect = async (req, res, next) => {
+  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+    try {
+      const token = req.headers.authorization.split(' ')[1];
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'smartmart_super_secret_jwt_key_2026_production'
+      );
+      req.user = await User.findById(decoded.id).select('-password');
+    } catch (error) {
+      // Ignore token failure for optional authentication
+    }
+  }
+  next();
+};
+

@@ -6,20 +6,20 @@ import {
   getAllOrders,
   updateOrderStatus
 } from '../controllers/orderController.js';
-import { protect, admin } from '../middleware/authMiddleware.js';
+import { protect, admin, optionalProtect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
-// Create order / Admin get all orders
+// Create order (supports guest WhatsApp orders and authenticated users) / Admin get all orders
 router.route('/')
-  .post(protect, createOrder)
+  .post(optionalProtect, createOrder)
   .get(protect, admin, getAllOrders);
 
 // User's own orders
 router.get('/myorders', protect, getMyOrders);
 
 // Single order details
-router.get('/:id', protect, getOrderById);
+router.get('/:id', optionalProtect, getOrderById);
 
 // Admin update order delivery status
 router.put('/:id/status', protect, admin, updateOrderStatus);

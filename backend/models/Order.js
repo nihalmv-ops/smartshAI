@@ -4,7 +4,7 @@ const orderSchema = new mongoose.Schema(
   {
     user: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
+      required: false,
       ref: 'User'
     },
     orderItems: [
@@ -27,6 +27,20 @@ const orderSchema = new mongoose.Schema(
       city: { type: String, default: 'Bengaluru' },
       postalCode: { type: String, default: '560038' },
       phone: { type: String, required: true }
+    },
+    deliveryNotes: {
+      type: String,
+      trim: true,
+      default: ''
+    },
+    orderChannel: {
+      type: String,
+      enum: ['web', 'whatsapp'],
+      default: 'web'
+    },
+    whatsappContact: {
+      name: { type: String, default: '' },
+      phoneNumber: { type: String, default: '' }
     },
     paymentMethod: {
       type: String,
@@ -55,7 +69,17 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['Pending', 'Processing', 'Out for Delivery', 'Delivered', 'Cancelled'],
+      enum: [
+        'WhatsApp Pending',
+        'Pending',
+        'Confirmed',
+        'Processing',
+        'Preparing',
+        'Ready',
+        'Out for Delivery',
+        'Delivered',
+        'Cancelled'
+      ],
       default: 'Pending'
     },
     isPaid: {

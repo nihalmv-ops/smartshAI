@@ -11,6 +11,7 @@ import { CategoryManagement } from './pages/CategoryManagement';
 import { OrderManagement } from './pages/OrderManagement';
 import { UserManagement } from './pages/UserManagement';
 import { AIAnalytics } from './pages/AIAnalytics';
+import { WhatsAppSettings } from './pages/WhatsAppSettings';
 
 export const App = () => {
   return (
@@ -33,6 +34,7 @@ export const App = () => {
             <Route path="products" element={<ProductManagement />} />
             <Route path="categories" element={<CategoryManagement />} />
             <Route path="orders" element={<OrderManagement />} />
+            <Route path="whatsapp-settings" element={<WhatsAppSettings />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="analytics" element={<AIAnalytics />} />
           </Route>

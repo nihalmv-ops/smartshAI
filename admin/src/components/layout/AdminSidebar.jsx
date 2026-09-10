@@ -10,7 +10,8 @@ import {
   ShieldCheck,
   ExternalLink,
   LogOut,
-  X
+  X,
+  MessageSquare
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
@@ -23,6 +24,7 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
     { to: '/products', label: 'Products', icon: Package },
     { to: '/categories', label: 'Categories', icon: Layers },
     { to: '/orders', label: 'Orders & WhatsApp', icon: ShoppingBag },
+    { to: '/whatsapp-settings', label: 'WhatsApp Contacts', icon: MessageSquare },
     { to: '/users', label: 'Users & Staff', icon: Users },
     { to: '/analytics', label: 'AI Analytics', icon: Sparkles },
   ];

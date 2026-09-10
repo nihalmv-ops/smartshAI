@@ -13,6 +13,7 @@ import cartRoutes from './routes/cartRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import whatsAppContactRoutes from './routes/whatsAppContactRoutes.js';
 
 // Middleware imports
 import { notFound, errorHandler } from './middleware/errorMiddleware.js';
@@ -75,6 +76,7 @@ app.use('/api/cart', cartRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/whatsapp-contacts', whatsAppContactRoutes);
 
 // Make uploads folder static
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));

@@ -12,10 +12,19 @@ import {
   CheckCircle2,
   Edit3,
   X,
-  Check
+  Check,
+  Store,
+  TrendingUp,
+  Landmark,
+  Receipt,
+  FileText,
+  LineChart,
+  Globe,
+  MessageSquare
 } from 'lucide-react';
 import { adminService } from '../services/adminService';
 import { settingsService, defaultSettings } from '../services/settingsService';
+import { analyticsService } from '../services/analyticsService';
 import { AdminHeader } from '../components/layout/AdminHeader';
 
 export const DashboardOverview = () => {
@@ -52,12 +61,15 @@ export const DashboardOverview = () => {
     }
   });
 
+  const [salesOverview, setSalesOverview] = useState(null);
+
   const fetchStats = async () => {
     try {
       setRefreshing(true);
-      const [res, settingsData] = await Promise.allSettled([
+      const [res, settingsData, salesData] = await Promise.allSettled([
         adminService.getDashboardStats(),
-        settingsService.getSettings()
+        settingsService.getSettings(),
+        analyticsService.getSalesOverview()
       ]);
 
       if (res.status === 'fulfilled' && res.value?.data) {
@@ -67,6 +79,9 @@ export const DashboardOverview = () => {
         setSettings(settingsData.value);
         setDeliveryFeeVal(settingsData.value.deliveryFee ?? 25);
         setThresholdVal(settingsData.value.freeDeliveryThreshold ?? 199);
+      }
+      if (salesData.status === 'fulfilled' && salesData.value) {
+        setSalesOverview(salesData.value);
       }
     } catch (err) {
       console.error('Failed to load dashboard stats:', err);
@@ -160,6 +175,154 @@ export const DashboardOverview = () => {
             </button>
           </div>
         )}
+
+        {/* Supermarket Operations & Finance Launchpad */}
+        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 text-white shadow-xl">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 className="text-base font-black text-white flex items-center gap-2">
+                <Store className="w-5 h-5 text-emerald-400" />
+                Skyline Mart Business Operations Launchpad
+              </h2>
+              <p className="text-xs text-slate-400">
+                Direct access to physical counter POS, multi-channel sales, cash reconciliation, and statements
+              </p>
+            </div>
+            <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full self-start sm:self-auto">
+              Single Source of Truth Active
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <button
+              onClick={() => navigate('/pos')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 transition text-center group cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-bold mb-2 group-hover:scale-105 transition-transform shadow-md shadow-emerald-500/20">
+                <Store className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-black text-emerald-300">Offline POS</span>
+              <span className="text-[10px] text-slate-400">Billing Counter</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/sales')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 transition text-center group cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-blue-500 text-white flex items-center justify-center font-bold mb-2 group-hover:scale-105 transition-transform shadow-md shadow-blue-500/20">
+                <TrendingUp className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-black text-blue-300">Sales Dashboard</span>
+              <span className="text-[10px] text-slate-400">Profit & Margins</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/register')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 transition text-center group cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-amber-500 text-slate-950 flex items-center justify-center font-bold mb-2 group-hover:scale-105 transition-transform shadow-md shadow-amber-500/20">
+                <Landmark className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-black text-amber-300">Cash Drawer</span>
+              <span className="text-[10px] text-slate-400">Reconcile Float</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/expenses')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition text-center group cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center font-bold mb-2 group-hover:scale-105 transition-transform shadow-md shadow-rose-500/20">
+                <Receipt className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-black text-rose-300">Expenses</span>
+              <span className="text-[10px] text-slate-400">Rent & Utility</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/growth')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 transition text-center group cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-purple-500 text-white flex items-center justify-center font-bold mb-2 group-hover:scale-105 transition-transform shadow-md shadow-purple-500/20">
+                <LineChart className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-black text-purple-300">Growth & CLV</span>
+              <span className="text-[10px] text-slate-400">Shopper Retention</span>
+            </button>
+
+            <button
+              onClick={() => navigate('/reports')}
+              className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 transition text-center group cursor-pointer"
+            >
+              <div className="w-10 h-10 rounded-xl bg-sky-500 text-white flex items-center justify-center font-bold mb-2 group-hover:scale-105 transition-transform shadow-md shadow-sky-500/20">
+                <FileText className="w-5 h-5" />
+              </div>
+              <span className="text-xs font-black text-sky-300">Reports</span>
+              <span className="text-[10px] text-slate-400">CSV & Print P&L</span>
+            </button>
+          </div>
+
+          {/* Multi-Channel Sales Live Bar */}
+          {salesOverview?.thisMonth && (
+            <div className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-400 flex items-center justify-center">
+                    <Store className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Offline Counter</span>
+                    <p className="text-sm font-black text-white">
+                      ₹{salesOverview.thisMonth.offlineSales.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-emerald-400">
+                  {salesOverview.thisMonth.totalRevenue > 0
+                    ? `${Math.round((salesOverview.thisMonth.offlineSales / salesOverview.thisMonth.totalRevenue) * 100)}%`
+                    : '0%'}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                    <Globe className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">Online Website</span>
+                    <p className="text-sm font-black text-white">
+                      ₹{salesOverview.thisMonth.onlineSales.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-blue-400">
+                  {salesOverview.thisMonth.totalRevenue > 0
+                    ? `${Math.round((salesOverview.thisMonth.onlineSales / salesOverview.thisMonth.totalRevenue) * 100)}%`
+                    : '0%'}
+                </span>
+              </div>
+
+              <div className="bg-slate-950/60 p-3 rounded-xl border border-slate-800 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-teal-500/20 text-teal-400 flex items-center justify-center">
+                    <MessageSquare className="w-3.5 h-3.5" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">WhatsApp Direct</span>
+                    <p className="text-sm font-black text-white">
+                      ₹{salesOverview.thisMonth.whatsAppSales.toLocaleString('en-IN')}
+                    </p>
+                  </div>
+                </div>
+                <span className="text-xs font-bold text-teal-400">
+                  {salesOverview.thisMonth.totalRevenue > 0
+                    ? `${Math.round((salesOverview.thisMonth.whatsAppSales / salesOverview.thisMonth.totalRevenue) * 100)}%`
+                    : '0%'}
+                </span>
+              </div>
+            </div>
+          )}
+        </div>
 
         {/* Top 4 KPI Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5">

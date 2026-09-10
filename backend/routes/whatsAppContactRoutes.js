@@ -18,3 +18,4 @@ router.route('/:id')
   .delete(protect, admin, deleteWhatsAppContact);
 
 export default router;
+

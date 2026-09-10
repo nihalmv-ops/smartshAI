@@ -1,17 +1,23 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import {
+  LayoutDashboard,
+  Store,
+  ShoppingBag,
   TrendingUp,
+  Receipt,
+  Landmark,
+  FileText,
+  LineChart,
+  Sparkles,
   Package,
   Layers,
-  ShoppingBag,
+  MessageSquare,
   Users,
-  Sparkles,
   ShieldCheck,
   ExternalLink,
   LogOut,
-  X,
-  MessageSquare
+  X
 } from 'lucide-react';
 import { useAdminAuth } from '../../context/AdminAuthContext';
 
@@ -19,14 +25,40 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAdminAuth();
   const storefrontUrl = import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173';
 
-  const navItems = [
-    { to: '/', label: 'Overview', icon: TrendingUp },
-    { to: '/products', label: 'Products', icon: Package },
-    { to: '/categories', label: 'Categories', icon: Layers },
-    { to: '/orders', label: 'Orders & WhatsApp', icon: ShoppingBag },
-    { to: '/whatsapp-settings', label: 'WhatsApp Contacts', icon: MessageSquare },
-    { to: '/users', label: 'Users & Staff', icon: Users },
-    { to: '/analytics', label: 'AI Analytics', icon: Sparkles },
+  const navGroups = [
+    {
+      title: 'Store Operations',
+      items: [
+        { to: '/', label: 'Overview', icon: LayoutDashboard },
+        { to: '/pos', label: 'Offline Counter POS', icon: Store, badge: 'Counter' },
+        { to: '/orders', label: 'Orders & WhatsApp', icon: ShoppingBag }
+      ]
+    },
+    {
+      title: 'Finance & Accounts',
+      items: [
+        { to: '/sales', label: 'Sales & Revenue', icon: TrendingUp },
+        { to: '/expenses', label: 'Operating Expenses', icon: Receipt },
+        { to: '/register', label: 'Daily Cash Drawer', icon: Landmark },
+        { to: '/reports', label: 'Reports & Statements', icon: FileText }
+      ]
+    },
+    {
+      title: 'Growth & Intelligence',
+      items: [
+        { to: '/growth', label: 'Business Growth', icon: LineChart },
+        { to: '/analytics', label: 'AI Analytics', icon: Sparkles }
+      ]
+    },
+    {
+      title: 'Catalog & System',
+      items: [
+        { to: '/products', label: 'Products & Costing', icon: Package },
+        { to: '/categories', label: 'Categories', icon: Layers },
+        { to: '/whatsapp-settings', label: 'WhatsApp Contacts', icon: MessageSquare },
+        { to: '/users', label: 'Users & Staff', icon: Users }
+      ]
+    }
   ];
 
   return (
@@ -48,14 +80,14 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
         {/* Brand Logo Header */}
         <div className="h-16 px-5 sm:px-6 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-brand-500 text-white flex items-center justify-center shadow-md shadow-brand-500/25">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shadow-md shadow-emerald-500/20 font-black">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <div>
               <h1 className="text-sm font-black tracking-tight text-white flex items-center gap-1.5">
-                Skyline Mart <span className="text-brand-400">Admin</span>
+                Skyline Mart <span className="text-emerald-400 font-bold">Admin</span>
               </h1>
-              <p className="text-[10px] text-slate-400 font-medium">Control Center</p>
+              <p className="text-[10px] text-slate-400 font-medium">Business Management System</p>
             </div>
           </div>
 
@@ -68,74 +100,84 @@ export const AdminSidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Navigation Links */}
-        <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
-          <p className="px-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">
-            Management
-          </p>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.to === '/'}
-                onClick={() => {
-                  if (onClose) onClose();
-                }}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? 'bg-brand-500 text-white shadow-md shadow-brand-500/25'
-                      : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
-                  }`
-                }
-              >
-                <Icon className="w-4 h-4 shrink-0" />
-                <span>{item.label}</span>
-              </NavLink>
-            );
-          })}
+        {/* Navigation Groups */}
+        <nav className="p-3.5 space-y-4 flex-1 overflow-y-auto">
+          {navGroups.map((group, gIdx) => (
+            <div key={gIdx} className="space-y-1">
+              <p className="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                {group.title}
+              </p>
+              {group.items.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <NavLink
+                    key={item.to}
+                    to={item.to}
+                    end={item.to === '/'}
+                    onClick={() => {
+                      if (onClose) onClose();
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center justify-between px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+                        isActive
+                          ? 'bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20'
+                          : 'text-slate-400 hover:text-white hover:bg-slate-800/70'
+                      }`
+                    }
+                  >
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <Icon className="w-4 h-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </div>
+                    {item.badge && (
+                      <span className="px-1.5 py-0.5 text-[9px] font-extrabold uppercase rounded-md bg-emerald-400/20 text-emerald-300 border border-emerald-400/30">
+                        {item.badge}
+                      </span>
+                    )}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
-      {/* Bottom User & Actions Section */}
-      <div className="p-4 border-t border-slate-800 space-y-3 bg-slate-950/40">
-        <a
-          href={storefrontUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center justify-between px-3.5 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/60 transition-colors"
-        >
-          <span className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span>View Customer Site</span>
-          </span>
-          <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
-        </a>
-
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-full bg-brand-600/30 border border-brand-500/40 text-brand-300 font-bold flex items-center justify-center text-xs shrink-0">
-              {user?.name?.charAt(0).toUpperCase() || 'A'}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-white truncate">{user?.name || 'Admin'}</p>
-              <p className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@smartmart.ai'}</p>
-            </div>
-          </div>
-          <button
-            onClick={logout}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors"
-            title="Sign Out"
+        {/* Bottom User & Actions Section */}
+        <div className="p-3.5 border-t border-slate-800 space-y-2.5 bg-slate-950/40">
+          <a
+            href={storefrontUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-800 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700/60 transition-colors"
           >
-            <LogOut className="w-4 h-4" />
-          </button>
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              <span>Open Storefront</span>
+            </span>
+            <ExternalLink className="w-3.5 h-3.5 text-slate-400" />
+          </a>
+
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 font-black flex items-center justify-center text-xs shrink-0">
+                {user?.name?.charAt(0).toUpperCase() || 'A'}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-white truncate">{user?.name || 'Admin'}</p>
+                <p className="text-[10px] text-slate-400 truncate">{user?.email || 'admin@skylinemart.com'}</p>
+              </div>
+            </div>
+            <button
+              onClick={logout}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-slate-800 transition-colors cursor-pointer"
+              title="Sign Out"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
         </div>
-      </div>
-    </aside>
+      </aside>
     </>
   );
 };
 
 export default AdminSidebar;
-

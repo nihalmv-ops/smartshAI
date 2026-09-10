@@ -30,25 +30,34 @@ export const createOrder = async (req, res, next) => {
     const dbProducts = await Product.find({ _id: { $in: productIds } });
     const productMap = new Map(dbProducts.map((p) => [p._id.toString(), p]));
 
-    // Construct verified order items with official database prices
+    // Construct verified order items with official database prices and cost snapshots
     let calculatedItemsPrice = 0;
+    let calculatedTotalCost = 0;
+
     const verifiedOrderItems = orderItems.map((item) => {
       const pId = (item.product || item._id || item.id || '').toString();
       const dbProduct = productMap.get(pId);
 
       const itemPrice = dbProduct ? Number(dbProduct.price) : Number(item.price || 0);
+      const costPrice = dbProduct
+        ? Number(dbProduct.costPrice || Math.round(itemPrice * 0.75))
+        : Math.round(itemPrice * 0.75);
       const itemName = dbProduct ? dbProduct.name : (item.name || 'Product');
+      const itemCategory = dbProduct ? dbProduct.category : (item.category || 'grocery');
       const itemImage = dbProduct ? dbProduct.image : (item.image || '');
       const itemUnit = dbProduct ? dbProduct.unit : (item.unit || '');
       const qty = Math.max(1, Number(item.qty || item.quantity || 1));
 
       calculatedItemsPrice += itemPrice * qty;
+      calculatedTotalCost += costPrice * qty;
 
       return {
         product: dbProduct ? dbProduct._id : item.product || item._id,
         name: itemName,
         image: itemImage,
         price: itemPrice,
+        costPrice,
+        category: itemCategory,
         unit: itemUnit,
         qty
       };
@@ -62,6 +71,7 @@ export const createOrder = async (req, res, next) => {
     const deliveryFee = calculatedItemsPrice >= freeThreshold ? 0 : standardFee;
     const safeDiscount = Math.max(0, Math.min(Number(discount) || 0, calculatedItemsPrice));
     const totalPrice = Math.max(0, calculatedItemsPrice - safeDiscount + deliveryFee);
+    const grossProfit = Math.max(0, calculatedItemsPrice - safeDiscount - calculatedTotalCost);
 
     const isWhatsApp = orderChannel === 'whatsapp';
     const initialStatus = isWhatsApp ? 'WhatsApp Pending' : 'Pending';
@@ -77,17 +87,34 @@ export const createOrder = async (req, res, next) => {
         phone: shippingAddress?.phone || (req.user ? req.user.phone : '')
       },
       deliveryNotes: deliveryNotes ? String(deliveryNotes).trim() : '',
-      orderChannel: isWhatsApp ? 'whatsapp' : 'web',
+      orderChannel: isWhatsApp ? 'whatsapp' : 'online',
       whatsappContact: whatsappContact || { name: '', phoneNumber: '' },
       paymentMethod: paymentMethod || 'Cash on Delivery',
       itemsPrice: calculatedItemsPrice,
       deliveryFee,
       discount: safeDiscount,
       totalPrice,
+      totalCost: calculatedTotalCost,
+      grossProfit,
       status: initialStatus
     });
 
     const createdOrder = await order.save();
+
+    // Decrement product stock in MongoDB
+    for (const item of verifiedOrderItems) {
+      if (item.product) {
+        const prod = await Product.findByIdAndUpdate(
+          item.product,
+          { $inc: { stockCount: -item.qty } },
+          { new: true }
+        );
+        if (prod && prod.stockCount <= 0) {
+          prod.inStock = false;
+          await prod.save();
+        }
+      }
+    }
 
     res.status(201).json({
       success: true,

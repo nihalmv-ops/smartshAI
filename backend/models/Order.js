@@ -11,8 +11,10 @@ const orderSchema = new mongoose.Schema(
       {
         name: { type: String, required: true },
         qty: { type: Number, required: true, default: 1 },
-        image: { type: String, required: true },
+        image: { type: String, default: '' },
         price: { type: Number, required: true },
+        costPrice: { type: Number, default: 0 },
+        category: { type: String, default: 'grocery' },
         unit: { type: String },
         product: {
           type: mongoose.Schema.Types.ObjectId,
@@ -35,8 +37,18 @@ const orderSchema = new mongoose.Schema(
     },
     orderChannel: {
       type: String,
-      enum: ['web', 'whatsapp'],
-      default: 'web'
+      enum: ['online', 'web', 'whatsapp', 'offline'],
+      default: 'online'
+    },
+    receiptNumber: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true
+    },
+    staff: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
     },
     whatsappContact: {
       name: { type: String, default: '' },
@@ -57,6 +69,10 @@ const orderSchema = new mongoose.Schema(
       required: true,
       default: 0.0
     },
+    tax: {
+      type: Number,
+      default: 0.0
+    },
     deliveryFee: {
       type: Number,
       required: true,
@@ -65,6 +81,14 @@ const orderSchema = new mongoose.Schema(
     totalPrice: {
       type: Number,
       required: true,
+      default: 0.0
+    },
+    totalCost: {
+      type: Number,
+      default: 0.0
+    },
+    grossProfit: {
+      type: Number,
       default: 0.0
     },
     status: {
@@ -78,6 +102,7 @@ const orderSchema = new mongoose.Schema(
         'Ready',
         'Out for Delivery',
         'Delivered',
+        'Completed',
         'Cancelled'
       ],
       default: 'Pending'
@@ -101,6 +126,12 @@ const orderSchema = new mongoose.Schema(
     timestamps: true
   }
 );
+
+// Indexes for sales, reports, and financial aggregation
+orderSchema.index({ orderChannel: 1, status: 1 });
+orderSchema.index({ createdAt: -1 });
+orderSchema.index({ status: 1, createdAt: -1 });
+orderSchema.index({ paymentMethod: 1 });
 
 const Order = mongoose.model('Order', orderSchema);
 export default Order;

@@ -37,7 +37,10 @@ export const ProductManagement = () => {
     category: 'grocery',
     unit: '1 kg',
     price: 50,
+    costPrice: 38,
     originalPrice: 60,
+    barcode: '',
+    lowStockThreshold: 10,
     stockCount: 50,
     inStock: true,
     badge: 'Fresh',
@@ -90,7 +93,10 @@ export const ProductManagement = () => {
       category: p.category,
       unit: p.unit,
       price: p.price,
+      costPrice: p.costPrice !== undefined ? p.costPrice : Math.round((p.price || 0) * 0.75),
       originalPrice: p.originalPrice || p.price,
+      barcode: p.barcode || '',
+      lowStockThreshold: p.lowStockThreshold || 10,
       stockCount: p.stockCount !== undefined ? p.stockCount : 50,
       inStock: p.inStock !== undefined ? p.inStock : true,
       badge: p.badge || '',
@@ -276,12 +282,14 @@ export const ProductManagement = () => {
         {/* Products Table */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[620px]">
+            <table className="w-full text-left border-collapse min-w-[750px]">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">Product</th>
                   <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Price</th>
+                  <th className="py-3 px-3">Sell Price</th>
+                  <th className="py-3 px-3">Purchase Cost</th>
+                  <th className="py-3 px-3">Gross Profit</th>
                   <th className="py-3 px-4 text-center">Manage Stock</th>
                   <th className="py-3 px-3">Status</th>
                   <th className="py-3 px-4 text-right">Actions</th>
@@ -290,7 +298,7 @@ export const ProductManagement = () => {
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredProducts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-400">
+                    <td colSpan={8} className="py-12 text-center text-slate-400">
                       No products found matching your filter criteria.
                     </td>
                   </tr>
@@ -299,6 +307,9 @@ export const ProductManagement = () => {
                     const pid = p._id || p.id;
                     const stock = p.stockCount !== undefined ? p.stockCount : 50;
                     const isLowStock = stock <= 10;
+                    const cost = p.costPrice !== undefined ? p.costPrice : Math.round((p.price || 0) * 0.75);
+                    const grossProfit = Math.max(0, (p.price || 0) - cost);
+                    const margin = p.price > 0 ? Math.round((grossProfit / p.price) * 100) : 0;
 
                     return (
                       <tr key={pid} className="hover:bg-slate-50/60 transition-colors">
@@ -311,7 +322,14 @@ export const ProductManagement = () => {
                             />
                             <div>
                               <p className="font-bold text-slate-900 text-sm">{p.name}</p>
-                              <p className="text-[11px] text-slate-500 mt-0.5">{p.unit}</p>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <span className="text-[11px] text-slate-500">{p.unit}</span>
+                                {p.barcode && (
+                                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
+                                    {p.barcode}
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -329,6 +347,19 @@ export const ProductManagement = () => {
                               ₹{p.originalPrice}
                             </span>
                           )}
+                        </td>
+
+                        <td className="py-3.5 px-3 font-semibold text-emerald-800 text-sm">
+                          ₹{cost}
+                        </td>
+
+                        <td className="py-3.5 px-3">
+                          <span className="font-bold text-emerald-700 text-xs block">
+                            +₹{grossProfit}
+                          </span>
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">
+                            {margin}% margin
+                          </span>
                         </td>
 
                         <td className="py-3.5 px-4 text-center">
@@ -454,9 +485,9 @@ export const ProductManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Sale Price (₹) *</label>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Selling Price (₹) *</label>
                   <input
                     type="number"
                     min="0"
@@ -464,6 +495,18 @@ export const ProductManagement = () => {
                     value={productForm.price}
                     onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-emerald-800 mb-1">Purchase Cost (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    required
+                    value={productForm.costPrice}
+                    onChange={(e) => setProductForm({ ...productForm, costPrice: Number(e.target.value) })}
+                    className="w-full px-3.5 py-2 bg-emerald-50/50 border border-emerald-300 rounded-xl text-xs sm:text-sm font-bold text-emerald-950 focus:outline-none"
+                    placeholder="e.g. 38"
                   />
                 </div>
                 <div>
@@ -478,7 +521,17 @@ export const ProductManagement = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Barcode / SKU</label>
+                  <input
+                    type="text"
+                    value={productForm.barcode}
+                    onChange={(e) => setProductForm({ ...productForm, barcode: e.target.value })}
+                    className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-mono focus:outline-none"
+                    placeholder="e.g. 890103038"
+                  />
+                </div>
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Stock Units</label>
                   <input
@@ -496,7 +549,7 @@ export const ProductManagement = () => {
                     value={productForm.badge}
                     onChange={(e) => setProductForm({ ...productForm, badge: e.target.value })}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
-                    placeholder="e.g. Fresh, Popular, Organic"
+                    placeholder="e.g. Fresh, Popular"
                   />
                 </div>
               </div>

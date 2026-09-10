@@ -84,3 +84,4 @@ whatsAppContactSchema.statics.seedDefaultContacts = async function () {
 
 const WhatsAppContact = mongoose.model('WhatsAppContact', whatsAppContactSchema);
 export default WhatsAppContact;
+

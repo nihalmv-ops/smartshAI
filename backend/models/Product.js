@@ -70,6 +70,26 @@ const productSchema = new mongoose.Schema(
     popular: {
       type: Boolean,
       default: false
+    },
+    costPrice: {
+      type: Number,
+      default: function () {
+        return Math.round((this.price || 0) * 0.75);
+      }
+    },
+    barcode: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true
+    },
+    taxRate: {
+      type: Number,
+      default: 0
+    },
+    lowStockThreshold: {
+      type: Number,
+      default: 10
     }
   },
   {
@@ -77,8 +97,17 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Search indexing for fast name and category text search
-productSchema.index({ name: 'text', category: 'text', description: 'text' });
+// Pre-save hook: ensure costPrice is populated if 0 or missing
+productSchema.pre('save', function (next) {
+  if (!this.costPrice || this.costPrice <= 0) {
+    this.costPrice = Math.round((this.price || 0) * 0.75);
+  }
+  next();
+});
+
+// Search indexing for fast name, category, description, and barcode text search
+productSchema.index({ name: 'text', category: 'text', description: 'text', barcode: 'text' });
+productSchema.index({ stockCount: 1, inStock: 1 });
 
 const Product = mongoose.model('Product', productSchema);
 export default Product;

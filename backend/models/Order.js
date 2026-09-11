@@ -10,7 +10,9 @@ const orderSchema = new mongoose.Schema(
     orderItems: [
       {
         name: { type: String, required: true },
+        productName: { type: String },
         qty: { type: Number, required: true, default: 1 },
+        quantity: { type: Number, default: 1 },
         image: { type: String, default: '' },
         originalPrice: { type: Number, default: 0 },
         sellingPrice: { type: Number, required: true },
@@ -24,20 +26,27 @@ const orderSchema = new mongoose.Schema(
           type: mongoose.Schema.Types.ObjectId,
           required: true,
           ref: 'Product'
+        },
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: 'Product'
         }
       }
     ],
     priceOverrideAudit: [
       {
         product: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
+        productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product' },
         productName: { type: String, default: '' },
         originalPrice: { type: Number, default: 0 },
         chargedPrice: { type: Number, default: 0 },
         differencePerUnit: { type: Number, default: 0 },
         qty: { type: Number, default: 1 },
+        quantity: { type: Number, default: 1 },
         changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         changedByName: { type: String, default: 'Admin' },
         date: { type: Date, default: Date.now },
+        saleId: { type: String, default: '' },
         receiptNumber: { type: String, default: '' }
       }
     ],

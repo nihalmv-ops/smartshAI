@@ -32,7 +32,7 @@ export const createOfflineSale = async (req, res, next) => {
     // Generate unique sequential formatted receipt number
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
-    const receiptNumber = `POS-${todayStr}-${randSuffix}`;
+    const receiptNumber = `OFF-${todayStr}-${randSuffix}`;
 
     // Look up all products from MongoDB for verified catalog prices and costs
     const productIds = items.map((i) => i.product || i._id || i.id).filter(Boolean);
@@ -93,21 +93,26 @@ export const createOfflineSale = async (req, res, next) => {
       if (isOverridden) {
         priceOverrideAudit.push({
           product: dbProduct._id,
+          productId: dbProduct._id,
           productName: name,
           originalPrice: catalogPrice,
           chargedPrice: actualBillingPrice,
           differencePerUnit: Math.round((actualBillingPrice - catalogPrice) * 100) / 100,
           qty,
+          quantity: qty,
           changedBy: req.user._id,
           changedByName: req.user.name || 'Admin',
           date: new Date(),
+          saleId: receiptNumber,
           receiptNumber
         });
       }
 
       return {
         product: dbProduct._id,
+        productId: dbProduct._id,
         name,
+        productName: name,
         originalPrice: catalogPrice,
         sellingPrice: actualBillingPrice,
         price: actualBillingPrice,
@@ -117,6 +122,7 @@ export const createOfflineSale = async (req, res, next) => {
         category,
         unit,
         qty,
+        quantity: qty,
         image: dbProduct.image || ''
       };
     });

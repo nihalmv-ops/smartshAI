@@ -491,7 +491,7 @@ export const OfflinePOS = () => {
                   <tr>
                     <th className="py-2 px-2.5">Product</th>
                     <th className="py-2 px-1 text-center">Qty</th>
-                    <th className="py-2 px-1 text-right">Orig Price</th>
+                    <th className="py-2 px-1 text-right">Original Price</th>
                     <th className="py-2 px-1 text-right">Bill Price</th>
                     <th className="py-2 px-1.5 text-right">Total</th>
                     <th className="py-2 px-1 text-center">Action</th>
@@ -729,19 +729,19 @@ export const OfflinePOS = () => {
 
             <form onSubmit={handleSaveBillingPrice} className="space-y-3.5">
               <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
-                <div className="flex justify-between items-center text-slate-500">
-                  <span>Original Catalog Price:</span>
-                  <span className="font-bold text-slate-800 font-mono text-sm">₹{editingItem.originalPrice}</span>
+                <div className="flex justify-between items-center text-slate-600">
+                  <span className="font-semibold">Original Price:</span>
+                  <span className="font-bold text-slate-900 font-mono text-sm">₹{editingItem.originalPrice}</span>
                 </div>
                 <div className="flex justify-between items-center text-slate-500">
-                  <span>Current Bill Quantity:</span>
+                  <span>Quantity:</span>
                   <span className="font-bold text-slate-800 font-mono">{editingItem.qty} units</span>
                 </div>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Billing Price (₹) for This Sale *
+                  Billing Price (₹):
                 </label>
                 <div className="relative">
                   <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>

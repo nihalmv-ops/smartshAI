@@ -707,3 +707,4 @@ export const salesAnalyticsService = {
 };
 
 export default salesAnalyticsService;
+

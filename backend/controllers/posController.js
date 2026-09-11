@@ -23,54 +23,113 @@ export const createOfflineSale = async (req, res, next) => {
       throw new Error('POS transaction must contain at least one item');
     }
 
-    // Look up all products from MongoDB for verified prices and costs
-    const productIds = items.map((i) => i.product || i._id || i.id).filter(Boolean);
-    const dbProducts = await Product.find({ _id: { $in: productIds } });
-    const productMap = new Map(dbProducts.map((p) => [p._id.toString(), p]));
-
-    let calculatedItemsPrice = 0;
-    let calculatedTotalCost = 0;
-
-    const orderItems = items.map((item) => {
-      const pId = (item.product || item._id || item.id || '').toString();
-      const dbProduct = productMap.get(pId);
-
-      const price = dbProduct ? Number(dbProduct.price) : Number(item.price || 0);
-      const costPrice = dbProduct
-        ? Number(dbProduct.costPrice || Math.round(price * 0.75))
-        : Math.round(price * 0.75);
-      const name = dbProduct ? dbProduct.name : item.name || 'Store Item';
-      const category = dbProduct ? dbProduct.category : item.category || 'grocery';
-      const unit = dbProduct ? dbProduct.unit : item.unit || 'pack';
-      const qty = Math.max(1, Number(item.qty || item.quantity || 1));
-
-      calculatedItemsPrice += price * qty;
-      calculatedTotalCost += costPrice * qty;
-
-      return {
-        product: dbProduct ? dbProduct._id : item.product || item._id,
-        name,
-        price,
-        costPrice,
-        category,
-        unit,
-        qty,
-        image: dbProduct ? dbProduct.image : ''
-      };
-    });
-
-    const safeDiscount = Math.max(0, Math.min(Number(discount) || 0, calculatedItemsPrice));
-    const safeTax = Math.max(0, Number(tax) || 0);
-    const totalPrice = Math.max(0, calculatedItemsPrice - safeDiscount + safeTax);
-    const grossProfit = Math.max(0, totalPrice - calculatedTotalCost);
+    // Authorization check: Only staff and admin can create offline POS sales and override prices
+    if (!req.user || (req.user.role !== 'admin' && req.user.role !== 'staff')) {
+      res.status(403);
+      throw new Error('Access denied: Only authorized admin and staff can create offline sales');
+    }
 
     // Generate unique sequential formatted receipt number
     const todayStr = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const randSuffix = Math.floor(1000 + Math.random() * 9000);
     const receiptNumber = `POS-${todayStr}-${randSuffix}`;
 
+    // Look up all products from MongoDB for verified catalog prices and costs
+    const productIds = items.map((i) => i.product || i._id || i.id).filter(Boolean);
+    const dbProducts = await Product.find({ _id: { $in: productIds } });
+    const productMap = new Map(dbProducts.map((p) => [p._id.toString(), p]));
+
+    let calculatedItemsPrice = 0;
+    let calculatedTotalCost = 0;
+    const priceOverrideAudit = [];
+
+    const orderItems = items.map((item) => {
+      const pId = (item.product || item._id || item.id || '').toString();
+      const dbProduct = productMap.get(pId);
+
+      if (!dbProduct) {
+        res.status(404);
+        throw new Error(`Product not found in store catalog: ${item.name || pId}`);
+      }
+
+      const catalogPrice = Number(dbProduct.price || 0);
+      const costPrice = Number(dbProduct.costPrice || Math.round(catalogPrice * 0.75));
+      const name = dbProduct.name;
+      const category = dbProduct.category || 'grocery';
+      const unit = dbProduct.unit || 'pack';
+      const qty = Math.max(1, Number(item.qty || item.quantity || 1));
+
+      // Check for requested custom billing price
+      let actualBillingPrice = catalogPrice;
+      let isOverridden = false;
+
+      const requestedPrice =
+        item.billPrice !== undefined
+          ? item.billPrice
+          : item.billingPrice !== undefined
+          ? item.billingPrice
+          : item.sellingPrice !== undefined
+          ? item.sellingPrice
+          : item.price;
+
+      if (requestedPrice !== undefined && requestedPrice !== null && requestedPrice !== '') {
+        const parsedPrice = Number(requestedPrice);
+        if (isNaN(parsedPrice) || parsedPrice < 0) {
+          res.status(400);
+          throw new Error(`Invalid billing price for product "${name}": must be a valid non-negative number`);
+        }
+        actualBillingPrice = Math.round(parsedPrice * 100) / 100;
+        if (Math.abs(actualBillingPrice - catalogPrice) > 0.001) {
+          isOverridden = true;
+        }
+      }
+
+      const itemTotal = Math.round(actualBillingPrice * qty * 100) / 100;
+      const itemCostTotal = Math.round(costPrice * qty * 100) / 100;
+
+      calculatedItemsPrice += itemTotal;
+      calculatedTotalCost += itemCostTotal;
+
+      if (isOverridden) {
+        priceOverrideAudit.push({
+          product: dbProduct._id,
+          productName: name,
+          originalPrice: catalogPrice,
+          chargedPrice: actualBillingPrice,
+          differencePerUnit: Math.round((actualBillingPrice - catalogPrice) * 100) / 100,
+          qty,
+          changedBy: req.user._id,
+          changedByName: req.user.name || 'Admin',
+          date: new Date(),
+          receiptNumber
+        });
+      }
+
+      return {
+        product: dbProduct._id,
+        name,
+        originalPrice: catalogPrice,
+        sellingPrice: actualBillingPrice,
+        price: actualBillingPrice,
+        costPrice,
+        itemTotal,
+        isPriceOverridden: isOverridden,
+        category,
+        unit,
+        qty,
+        image: dbProduct.image || ''
+      };
+    });
+
+    const safeDiscount = Math.max(0, Math.min(Number(discount) || 0, calculatedItemsPrice));
+    const safeTax = Math.max(0, Number(tax) || 0);
+    const totalPrice = Math.max(0, Math.round((calculatedItemsPrice - safeDiscount + safeTax) * 100) / 100);
+    // Gross Profit = Selling Price Used - Purchase Cost
+    const grossProfit = Math.max(0, Math.round((totalPrice - calculatedTotalCost) * 100) / 100);
+
     const order = new Order({
       orderItems,
+      priceOverrideAudit,
       shippingAddress: {
         fullName: (customerName || 'Walk-in Customer').trim(),
         phone: (customerPhone || '-').trim(),
@@ -99,7 +158,7 @@ export const createOfflineSale = async (req, res, next) => {
 
     const savedOrder = await order.save();
 
-    // Atomically decrement stock in MongoDB for all purchased products
+    // Atomically decrement stock in MongoDB ONLY (Product price remains completely unchanged)
     for (const it of orderItems) {
       if (it.product) {
         const updated = await Product.findByIdAndUpdate(
@@ -143,6 +202,7 @@ export const createOfflineSale = async (req, res, next) => {
         paymentMethod,
         amountTendered: Number(amountTendered) || totalPrice,
         changeDue,
+        priceOverrides: priceOverrideAudit,
         customerName: (customerName || 'Walk-in Customer').trim(),
         customerPhone: customerPhone || ''
       },
@@ -241,3 +301,4 @@ export const getPosShiftSummary = async (req, res, next) => {
     next(error);
   }
 };
+

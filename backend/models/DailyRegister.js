@@ -86,3 +86,4 @@ dailyRegisterSchema.pre('save', function (next) {
 
 const DailyRegister = mongoose.model('DailyRegister', dailyRegisterSchema);
 export default DailyRegister;
+

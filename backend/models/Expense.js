@@ -58,3 +58,4 @@ expenseSchema.index({ paymentMethod: 1 });
 
 const Expense = mongoose.model('Expense', expenseSchema);
 export default Expense;
+

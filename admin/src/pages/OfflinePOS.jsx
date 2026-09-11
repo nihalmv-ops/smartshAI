@@ -18,7 +18,8 @@ import {
   Barcode,
   Sparkles,
   Layers,
-  X
+  X,
+  Edit3
 } from 'lucide-react';
 import { posService } from '../services/posService';
 import { categoryService, defaultCategories } from '../services/categoryService';
@@ -39,6 +40,10 @@ export const OfflinePOS = () => {
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
+
+  // Per-item temporary price edit modal state
+  const [editingItem, setEditingItem] = useState(null);
+  const [tempBillingPrice, setTempBillingPrice] = useState('');
 
   // Shift & Status
   const [shiftSummary, setShiftSummary] = useState({ totalShiftSales: 0, totalTransactions: 0, paymentTotals: {} });
@@ -110,7 +115,18 @@ export const OfflinePOS = () => {
       }
       setCart(cart.map((item) => (item._id === product._id ? { ...item, qty: item.qty + 1 } : item)));
     } else {
-      setCart([...cart, { ...product, qty: 1 }]);
+      const catalogPrice = Number(product.price || 0);
+      setCart([
+        ...cart,
+        {
+          ...product,
+          originalPrice: catalogPrice,
+          billPrice: catalogPrice,
+          price: catalogPrice,
+          isPriceOverridden: false,
+          qty: 1
+        }
+      ]);
     }
     showToast(`Added "${product.name}" to bill`);
   };
@@ -137,10 +153,61 @@ export const OfflinePOS = () => {
     setDiscountAmount(0);
     setAmountTendered('');
     setNotes('');
+    setEditingItem(null);
   };
 
-  // Calculations
-  const subtotal = cart.reduce((acc, item) => acc + (item.price || 0) * (item.qty || 1), 0);
+  // Open Edit Price modal for a specific bill item
+  const handleOpenPriceEdit = (item) => {
+    setEditingItem(item);
+    setTempBillingPrice((item.billPrice !== undefined ? item.billPrice : item.price).toString());
+  };
+
+  // Save the custom billing price for this bill ONLY
+  const handleSaveBillingPrice = (e) => {
+    if (e) e.preventDefault();
+    if (!editingItem) return;
+
+    const parsed = Number(tempBillingPrice);
+    if (tempBillingPrice === '' || isNaN(parsed) || parsed < 0) {
+      showToast('Please enter a valid positive billing price', 'error');
+      return;
+    }
+
+    const roundedPrice = Math.round(parsed * 100) / 100;
+    const isOverridden = Math.abs(roundedPrice - editingItem.originalPrice) > 0.001;
+
+    setCart(
+      cart.map((item) =>
+        item._id === editingItem._id
+          ? {
+              ...item,
+              billPrice: roundedPrice,
+              price: roundedPrice,
+              isPriceOverridden: isOverridden
+            }
+          : item
+      )
+    );
+
+    setEditingItem(null);
+    showToast(
+      isOverridden
+        ? `Billing price updated to ₹${roundedPrice} for "${editingItem.name}" (Original: ₹${editingItem.originalPrice})`
+        : `Reset to catalog price ₹${roundedPrice} for "${editingItem.name}"`
+    );
+  };
+
+  // Reset to original catalog price inside modal
+  const handleResetBillingPrice = () => {
+    if (!editingItem) return;
+    setTempBillingPrice(editingItem.originalPrice.toString());
+  };
+
+  // Calculations using the per-item billing price
+  const subtotal = cart.reduce(
+    (acc, item) => acc + (Number(item.billPrice !== undefined ? item.billPrice : item.price) || 0) * (item.qty || 1),
+    0
+  );
   const safeDiscount = Math.min(Number(discountAmount) || 0, subtotal);
   const finalTotal = Math.max(0, subtotal - safeDiscount);
   const tenderedNum = Number(amountTendered) || 0;
@@ -161,14 +228,20 @@ export const OfflinePOS = () => {
     setSubmittingSale(true);
     try {
       const payload = {
-        items: cart.map((item) => ({
-          product: item._id,
-          name: item.name,
-          qty: item.qty,
-          price: item.price,
-          category: item.category,
-          unit: item.unit
-        })),
+        items: cart.map((item) => {
+          const currentBillPrice = item.billPrice !== undefined ? item.billPrice : item.price;
+          return {
+            product: item._id,
+            name: item.name,
+            qty: item.qty,
+            originalPrice: item.originalPrice !== undefined ? item.originalPrice : item.price,
+            billingPrice: currentBillPrice,
+            billPrice: currentBillPrice,
+            price: currentBillPrice,
+            category: item.category,
+            unit: item.unit
+          };
+        }),
         paymentMethod,
         discount: safeDiscount,
         customerName: customerName.trim() || 'Walk-in Customer',
@@ -406,52 +479,124 @@ export const OfflinePOS = () => {
             </div>
           </div>
 
-          {/* Cart Items List */}
-          <div className="flex-1 overflow-y-auto max-h-56 space-y-2 pr-1 divide-y divide-slate-100">
+          {/* Cart Items Table */}
+          <div className="flex-1 overflow-x-auto overflow-y-auto max-h-64 border border-slate-200/80 rounded-xl bg-slate-50/50">
             {cart.length === 0 ? (
               <div className="py-12 text-center text-slate-400 text-xs">
                 Cart is empty. Tap items or scan barcodes to add.
               </div>
             ) : (
-              cart.map((item) => (
-                <div key={item._id} className="pt-2 flex items-center justify-between text-xs">
-                  <div className="flex-1 min-w-0 pr-2">
-                    <p className="font-bold text-slate-900 truncate">{item.name}</p>
-                    <span className="text-[10px] text-slate-500">₹{item.price} each</span>
-                  </div>
+              <table className="w-full text-left text-xs min-w-[340px]">
+                <thead className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 border-b border-slate-200">
+                  <tr>
+                    <th className="py-2 px-2.5">Product</th>
+                    <th className="py-2 px-1 text-center">Qty</th>
+                    <th className="py-2 px-1 text-right">Orig Price</th>
+                    <th className="py-2 px-1 text-right">Bill Price</th>
+                    <th className="py-2 px-1.5 text-right">Total</th>
+                    <th className="py-2 px-1 text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200/70 bg-white">
+                  {cart.map((item) => {
+                    const orig = item.originalPrice !== undefined ? item.originalPrice : item.price;
+                    const currentBill = item.billPrice !== undefined ? item.billPrice : item.price;
+                    const itemTotal = Math.round(currentBill * item.qty * 100) / 100;
+                    const isOverridden = item.isPriceOverridden || Math.abs(currentBill - orig) > 0.001;
 
-                  <div className="flex items-center gap-2 shrink-0">
-                    <div className="flex items-center border border-slate-200 rounded-lg bg-slate-50">
-                      <button
-                        onClick={() => updateCartQty(item._id, item.qty - 1)}
-                        className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-l-lg cursor-pointer"
-                      >
-                        -
-                      </button>
-                      <span className="w-6 text-center font-bold font-mono text-slate-900 text-xs">
-                        {item.qty}
-                      </span>
-                      <button
-                        onClick={() => updateCartQty(item._id, item.qty + 1)}
-                        className="w-6 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-r-lg cursor-pointer"
-                      >
-                        +
-                      </button>
-                    </div>
+                    return (
+                      <tr key={item._id} className="hover:bg-slate-50/80 transition-colors">
+                        {/* Product Column */}
+                        <td className="py-2.5 px-2.5 max-w-[110px]">
+                          <p className="font-bold text-slate-900 truncate leading-tight" title={item.name}>
+                            {item.name}
+                          </p>
+                          {isOverridden ? (
+                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+                              Custom ₹{currentBill}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] text-slate-400">{item.unit || 'pack'}</span>
+                          )}
+                        </td>
 
-                    <span className="font-bold text-slate-900 text-xs w-14 text-right">
-                      ₹{item.price * item.qty}
-                    </span>
+                        {/* Qty Column */}
+                        <td className="py-2.5 px-1 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center border border-slate-200 rounded-md bg-slate-50">
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(item._id, item.qty - 1)}
+                              className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-l cursor-pointer"
+                            >
+                              -
+                            </button>
+                            <span className="w-5 text-center font-bold font-mono text-slate-900 text-[11px]">
+                              {item.qty}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => updateCartQty(item._id, item.qty + 1)}
+                              className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-r cursor-pointer"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </td>
 
-                    <button
-                      onClick={() => removeFromCart(item._id)}
-                      className="text-slate-400 hover:text-rose-600 p-1 cursor-pointer"
-                    >
-                      <X className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))
+                        {/* Original Price Column */}
+                        <td className="py-2.5 px-1 text-right font-mono text-slate-500 whitespace-nowrap">
+                          {isOverridden ? (
+                            <span className="line-through text-slate-400">₹{orig}</span>
+                          ) : (
+                            <span>₹{orig}</span>
+                          )}
+                        </td>
+
+                        {/* Bill Price Column */}
+                        <td className="py-2.5 px-1 text-right font-mono font-bold whitespace-nowrap">
+                          <span
+                            className={
+                              isOverridden
+                                ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-black'
+                                : 'text-slate-800'
+                            }
+                          >
+                            ₹{currentBill}
+                          </span>
+                        </td>
+
+                        {/* Total Column */}
+                        <td className="py-2.5 px-1.5 text-right font-mono font-black text-slate-900 whitespace-nowrap">
+                          ₹{itemTotal}
+                        </td>
+
+                        {/* Action Column: Edit & Delete */}
+                        <td className="py-2.5 px-1 text-center whitespace-nowrap">
+                          <div className="inline-flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenPriceEdit(item)}
+                              className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-800 text-[11px] font-bold border border-slate-200 hover:border-emerald-300 transition-colors cursor-pointer flex items-center gap-0.5"
+                              title="Edit price for this bill"
+                            >
+                              <Edit3 className="w-3 h-3" />
+                              <span>Edit</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeFromCart(item._id)}
+                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+                              title="Remove item"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
             )}
           </div>
 
@@ -559,6 +704,108 @@ export const OfflinePOS = () => {
         </div>
       </main>
 
+      {/* Edit Item Billing Price Modal (Applies ONLY to current bill) */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 text-slate-900 space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
+                  <Edit3 className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900">Edit Billing Price</h3>
+                  <p className="text-[11px] text-slate-500 truncate max-w-[200px]">{editingItem.name}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveBillingPrice} className="space-y-3.5">
+              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Original Catalog Price:</span>
+                  <span className="font-bold text-slate-800 font-mono text-sm">₹{editingItem.originalPrice}</span>
+                </div>
+                <div className="flex justify-between items-center text-slate-500">
+                  <span>Current Bill Quantity:</span>
+                  <span className="font-bold text-slate-800 font-mono">{editingItem.qty} units</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Billing Price (₹) for This Sale *
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0"
+                    required
+                    autoFocus
+                    value={tempBillingPrice}
+                    onChange={(e) => setTempBillingPrice(e.target.value)}
+                    placeholder={editingItem.originalPrice.toString()}
+                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                  />
+                </div>
+                <p className="text-[10px] text-amber-700 mt-1 font-medium leading-tight">
+                  ⚠️ Applies ONLY to this current bill. MongoDB catalog price remains ₹{editingItem.originalPrice}.
+                </p>
+              </div>
+
+              {/* Live Calculation Preview */}
+              {tempBillingPrice !== '' && !isNaN(Number(tempBillingPrice)) && (
+                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between text-xs">
+                  <span className="font-bold text-emerald-900">New Item Total:</span>
+                  <span className="font-black text-emerald-800 font-mono text-sm">
+                    ₹{Math.round(Number(tempBillingPrice) * editingItem.qty * 100) / 100}
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
+                {Number(tempBillingPrice) !== editingItem.originalPrice ? (
+                  <button
+                    type="button"
+                    onClick={handleResetBillingPrice}
+                    className="px-2.5 py-1.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                  >
+                    Reset to ₹{editingItem.originalPrice}
+                  </button>
+                ) : (
+                  <div />
+                )}
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingItem(null)}
+                    className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Printable Receipt Modal */}
       {completedReceipt && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-fadeIn">
@@ -579,18 +826,36 @@ export const OfflinePOS = () => {
             </div>
 
             <div className="space-y-1 text-xs max-h-48 overflow-y-auto divide-y divide-dashed divide-slate-200">
-              {completedReceipt.items.map((it, idx) => (
-                <div key={idx} className="pt-1 flex justify-between">
-                  <div>
-                    <p className="font-bold text-slate-900">{it.name}</p>
-                    <span className="text-[10px] text-slate-500">
-                      {it.qty} × ₹{it.price}
+              {completedReceipt.items.map((it, idx) => {
+                const isOverridden =
+                  it.isPriceOverridden ||
+                  (it.originalPrice && Math.abs(it.price - it.originalPrice) > 0.001);
+                return (
+                  <div key={idx} className="pt-1 flex justify-between">
+                    <div>
+                      <p className="font-bold text-slate-900">{it.name}</p>
+                      <span className="text-[10px] text-slate-500">
+                        {it.qty} × ₹{it.price}
+                        {isOverridden && (
+                          <span className="text-amber-800 font-semibold ml-1">
+                            (Reg. ₹{it.originalPrice})
+                          </span>
+                        )}
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-slate-800">
+                      ₹{it.itemTotal !== undefined ? it.itemTotal : it.price * it.qty}
                     </span>
                   </div>
-                  <span className="font-mono font-bold text-slate-800">₹{it.price * it.qty}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
+
+            {completedReceipt.priceOverrides && completedReceipt.priceOverrides.length > 0 && (
+              <div className="text-center py-1 px-2 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-200 font-medium">
+                Includes authorized custom billing price adjustments
+              </div>
+            )}
 
             <div className="pt-2 border-t border-dashed border-slate-300 text-xs space-y-1 font-mono">
               <div className="flex justify-between text-slate-600">
@@ -649,3 +914,4 @@ export const OfflinePOS = () => {
 };
 
 export default OfflinePOS;
+

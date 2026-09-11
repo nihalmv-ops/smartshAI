@@ -25,3 +25,4 @@ router.get('/ai-insights', protect, admin, getAIBusinessInsightsOverview);
 router.get('/reports', protect, admin, getReportData);
 
 export default router;
+

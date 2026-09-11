@@ -380,3 +380,4 @@ export default function ReportsManagement() {
     </div>
   );
 }
+

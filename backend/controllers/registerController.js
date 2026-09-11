@@ -238,3 +238,4 @@ export const getRegisterHistory = async (req, res, next) => {
     next(error);
   }
 };
+

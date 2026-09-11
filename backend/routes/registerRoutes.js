@@ -17,3 +17,4 @@ router.post('/close', protect, closeRegister);
 router.get('/history', protect, admin, getRegisterHistory);
 
 export default router;
+

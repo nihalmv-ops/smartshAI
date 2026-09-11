@@ -14,3 +14,4 @@ router.get('/products', protect, getPosProducts);
 router.get('/shift-summary', protect, getPosShiftSummary);
 
 export default router;
+

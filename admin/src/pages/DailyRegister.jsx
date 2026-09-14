@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { registerService } from '../services/registerService';
 
-export default function DailyRegister() {
+export function DailyRegister() {
   const [loading, setLoading] = useState(true);
   const [liveStats, setLiveStats] = useState(null);
   const [register, setRegister] = useState(null);
@@ -649,3 +649,4 @@ export default function DailyRegister() {
   );
 }
 
+export default DailyRegister;

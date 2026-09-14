@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { analyticsService } from '../services/analyticsService';
 
-export default function BusinessGrowth() {
+export function BusinessGrowth() {
   const [loading, setLoading] = useState(true);
   const [growthData, setGrowthData] = useState(null);
   const [customerData, setCustomerData] = useState(null);
@@ -396,3 +396,4 @@ export default function BusinessGrowth() {
   );
 }
 
+export default BusinessGrowth;

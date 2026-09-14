@@ -25,7 +25,7 @@ const REPORT_TYPES = [
   { id: 'inventory', name: 'Inventory Valuation & Low Stock', desc: 'Current stock count, cost, and selling value' }
 ];
 
-export default function ReportsManagement() {
+export function ReportsManagement() {
   const [reportType, setReportType] = useState('sales');
   const [datePreset, setDatePreset] = useState('month');
   const [startDate, setStartDate] = useState('');
@@ -381,3 +381,4 @@ export default function ReportsManagement() {
   );
 }
 
+export default ReportsManagement;

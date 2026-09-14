@@ -14,12 +14,12 @@ import { AIAnalytics } from './pages/AIAnalytics';
 import { WhatsAppSettings } from './pages/WhatsAppSettings';
 
 // New Supermarket Management Pages
-import OfflinePOS from './pages/OfflinePOS';
-import SalesDashboard from './pages/SalesDashboard';
-import ExpenseManagement from './pages/ExpenseManagement';
-import DailyRegister from './pages/DailyRegister';
-import BusinessGrowth from './pages/BusinessGrowth';
-import ReportsManagement from './pages/ReportsManagement';
+import { OfflinePOS } from './pages/OfflinePOS';
+import { SalesDashboard } from './pages/SalesDashboard';
+import { ExpenseManagement } from './pages/ExpenseManagement';
+import { DailyRegister } from './pages/DailyRegister';
+import { BusinessGrowth } from './pages/BusinessGrowth';
+import { ReportsManagement } from './pages/ReportsManagement';
 
 export const App = () => {
   return (

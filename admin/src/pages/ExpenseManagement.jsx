@@ -43,7 +43,7 @@ const PAYMENT_METHODS = [
   { value: 'Other', label: 'Other', icon: HelpCircle }
 ];
 
-export default function ExpenseManagement() {
+export function ExpenseManagement() {
   const [expenses, setExpenses] = useState([]);
   const [categoryBreakdown, setCategoryBreakdown] = useState([]);
   const [totalAmount, setTotalAmount] = useState(0);
@@ -592,3 +592,4 @@ export default function ExpenseManagement() {
   );
 }
 
+export default ExpenseManagement;

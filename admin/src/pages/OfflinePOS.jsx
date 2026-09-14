@@ -115,11 +115,14 @@ export const parseWeightOrQty = (inputVal, productUnit) => {
 // Fast inline editable table row for POS cart with Weight & Custom Price support
 const PosCartItemRow = ({
   item,
+  itemIndex,
   canEditPrice,
   onUpdateQty,
   onUpdatePrice,
   onRemove,
   onPriceCommittedFocusSearch,
+  onNavigateItem,
+  registerRowRef,
   itemFocusTrigger,
   showToast
 }) => {
@@ -137,6 +140,23 @@ const PosCartItemRow = ({
   const [localWeight, setLocalWeight] = useState(currentQty.toString());
   const [localPrice, setLocalPrice] = useState(currentBill.toString());
   const weightInputRef = useRef(null);
+
+  // Expose focus handler to parent for arrow key navigation
+  useEffect(() => {
+    if (registerRowRef) {
+      registerRowRef(item._id, {
+        focusInput: () => {
+          if (weightInputRef.current) {
+            weightInputRef.current.focus();
+            weightInputRef.current.select();
+          }
+        }
+      });
+    }
+    return () => {
+      if (registerRowRef) registerRowRef(item._id, null);
+    };
+  }, [item._id, registerRowRef]);
 
   // Sync state with cart changes
   useEffect(() => {
@@ -188,6 +208,26 @@ const PosCartItemRow = ({
       e.preventDefault();
       setLocalWeight(currentQty.toString());
       e.target.blur();
+      if (onPriceCommittedFocusSearch) {
+        onPriceCommittedFocusSearch();
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      commitWeightChange();
+      if (onNavigateItem) {
+        onNavigateItem(itemIndex + 1);
+      }
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      commitWeightChange();
+      if (itemIndex === 0 && onPriceCommittedFocusSearch) {
+        onPriceCommittedFocusSearch();
+      } else if (onNavigateItem) {
+        onNavigateItem(itemIndex - 1);
+      }
+    } else if (e.key === 'Delete' && (e.ctrlKey || e.altKey || localWeight.trim() === '')) {
+      e.preventDefault();
+      onRemove(item._id);
       if (onPriceCommittedFocusSearch) {
         onPriceCommittedFocusSearch();
       }
@@ -258,7 +298,19 @@ const PosCartItemRow = ({
   };
 
   return (
-    <tr className="hover:bg-slate-50/80 transition-colors">
+    <tr
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Delete') {
+          e.preventDefault();
+          onRemove(item._id);
+          if (onPriceCommittedFocusSearch) {
+            onPriceCommittedFocusSearch();
+          }
+        }
+      }}
+      className="hover:bg-slate-50/80 transition-colors focus:outline-none focus:bg-emerald-50/40"
+    >
       {/* Product Column */}
       <td className="py-2.5 px-2.5 max-w-[120px]">
         <p className="font-bold text-slate-900 truncate leading-tight text-xs" title={item.name}>
@@ -464,6 +516,30 @@ export const OfflinePOS = () => {
   const [toast, setToast] = useState(null);
 
   const searchInputRef = useRef(null);
+  const cartRowRefs = useRef({});
+
+  const registerRowRef = (id, ref) => {
+    if (!ref) {
+      delete cartRowRefs.current[id];
+    } else {
+      cartRowRefs.current[id] = ref;
+    }
+  };
+
+  const handleNavigateCartItem = (targetIndex) => {
+    if (targetIndex < 0) {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+        searchInputRef.current.select?.();
+      }
+      return;
+    }
+    if (targetIndex >= cart.length) return;
+    const targetItem = cart[targetIndex];
+    if (targetItem && cartRowRefs.current[targetItem._id]) {
+      cartRowRefs.current[targetItem._id].focusInput();
+    }
+  };
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
@@ -756,9 +832,15 @@ export const OfflinePOS = () => {
               <input
                 ref={searchInputRef}
                 type="text"
-                placeholder="Scan barcode, or search product name / SKU..."
+                placeholder="Scan barcode, or search product name / SKU... (Press ↓ for bill items)"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowDown' && cart.length > 0) {
+                    e.preventDefault();
+                    handleNavigateCartItem(0);
+                  }
+                }}
                 className="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
               />
             </div>
@@ -931,15 +1013,18 @@ export const OfflinePOS = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/70 bg-white">
-                  {cart.map((item) => (
+                  {cart.map((item, idx) => (
                     <PosCartItemRow
                       key={item._id}
                       item={item}
+                      itemIndex={idx}
                       canEditPrice={canEditPrice}
                       onUpdateQty={updateCartQty}
                       onUpdatePrice={updateItemPrice}
                       onRemove={removeFromCart}
                       onPriceCommittedFocusSearch={handlePriceCommittedFocusSearch}
+                      onNavigateItem={handleNavigateCartItem}
+                      registerRowRef={registerRowRef}
                       itemFocusTrigger={itemFocusTrigger}
                       showToast={showToast}
                     />

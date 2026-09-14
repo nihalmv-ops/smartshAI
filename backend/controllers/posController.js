@@ -55,9 +55,15 @@ export const createOfflineSale = async (req, res, next) => {
       const catalogPrice = Number(dbProduct.price || 0);
       const costPrice = Number(dbProduct.costPrice || Math.round(catalogPrice * 0.75));
       const name = dbProduct.name;
-      const category = dbProduct.category || 'grocery';
-      const unit = dbProduct.unit || 'pack';
-      const qty = Math.max(1, Number(item.qty || item.quantity || 1));
+      const unit = item.unit || dbProduct.unit || 'piece';
+      const category = item.category || dbProduct.category || 'grocery';
+      const rawQty = Number(item.qty !== undefined ? item.qty : (item.quantity !== undefined ? item.quantity : 1));
+      if (isNaN(rawQty) || rawQty <= 0) {
+        res.status(400);
+        throw new Error(`Invalid quantity/weight for product "${name}": must be a valid positive number`);
+      }
+      // Sensible supermarket decimal precision (up to 3 decimal places for weights e.g. 1.5 kg, 0.25 kg)
+      const qty = Math.round(rawQty * 1000) / 1000;
 
       // Check for requested custom billing price
       let actualBillingPrice = catalogPrice;
@@ -172,8 +178,14 @@ export const createOfflineSale = async (req, res, next) => {
           { $inc: { stockCount: -it.qty } },
           { new: true }
         );
-        if (updated && updated.stockCount <= 0) {
-          updated.inStock = false;
+        if (updated) {
+          const cleanStock = Math.round(updated.stockCount * 1000) / 1000;
+          if (Math.abs(updated.stockCount - cleanStock) > 0.0001) {
+            updated.stockCount = cleanStock;
+          }
+          if (updated.stockCount <= 0) {
+            updated.inStock = false;
+          }
           await updated.save();
         }
       }

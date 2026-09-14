@@ -18,6 +18,7 @@ import {
   Barcode,
   Sparkles,
   Layers,
+  Scale,
   X
 } from 'lucide-react';
 import { posService } from '../services/posService';
@@ -25,7 +26,93 @@ import { categoryService, defaultCategories } from '../services/categoryService'
 import { AdminHeader } from '../components/layout/AdminHeader';
 import { useAdminAuth } from '../context/AdminAuthContext';
 
-// Fast inline editable table row for POS cart
+// Unit normalization and detection helpers
+export const normalizeUnit = (unit) => {
+  if (!unit) return 'piece';
+  const u = unit.toString().trim().toLowerCase();
+  if (['kg', 'kilogram', 'kilograms'].includes(u)) return 'kg';
+  if (['gram', 'grams', 'g', 'gm'].includes(u)) return 'gram';
+  if (['litre', 'liter', 'litres', 'liters', 'l'].includes(u)) return 'litre';
+  if (['piece', 'pieces', 'pc', 'pcs'].includes(u)) return 'piece';
+  if (['pack', 'packs', 'packet', 'packets'].includes(u)) return 'pack';
+  if (['box', 'boxes'].includes(u)) return 'box';
+  return u;
+};
+
+export const isWeightedUnit = (unit) => {
+  const norm = normalizeUnit(unit);
+  return ['kg', 'gram', 'litre'].includes(norm);
+};
+
+export const getUnitRateLabel = (unit) => {
+  const norm = normalizeUnit(unit);
+  switch (norm) {
+    case 'kg':
+      return 'kg';
+    case 'gram':
+      return 'g';
+    case 'litre':
+      return 'litre';
+    case 'piece':
+      return 'piece';
+    case 'pack':
+      return 'pack';
+    case 'box':
+      return 'box';
+    default:
+      return unit || 'piece';
+  }
+};
+
+/**
+ * Supermarket weight/quantity parser:
+ * Handles:
+ * - Direct numbers: "1.5" -> 1.5, "0.5" -> 0.5
+ * - Explicit unit strings: "1.5kg" -> 1.5
+ * - Supermarket gram conversion: "500g", "250g", "750g", "1000g" -> if product unit is kg, converts to 0.5, 0.25, 0.75, 1.0!
+ */
+export const parseWeightOrQty = (inputVal, productUnit) => {
+  if (typeof inputVal === 'number') {
+    return isNaN(inputVal) || inputVal <= 0 ? null : Math.round(inputVal * 1000) / 1000;
+  }
+  if (!inputVal || typeof inputVal !== 'string') return null;
+
+  const raw = inputVal.trim().toLowerCase();
+  if (!raw) return null;
+
+  const normUnit = normalizeUnit(productUnit);
+
+  // Check if string ends with 'g' or 'gm' (e.g. "500g", "250 gm", "500 grams")
+  const gramMatch = raw.match(/^([0-9]+(?:\.[0-9]+)?)\s*(?:g|gm|gram|grams)$/);
+  if (gramMatch) {
+    const valInGrams = parseFloat(gramMatch[1]);
+    if (isNaN(valInGrams) || valInGrams <= 0) return null;
+    // If product is priced per kg, 500g is 0.5 kg
+    if (normUnit === 'kg') {
+      return Math.round((valInGrams / 1000) * 1000) / 1000;
+    }
+    return Math.round(valInGrams * 1000) / 1000;
+  }
+
+  // Check if string ends with 'kg' (e.g. "1.5kg", "0.5 kg")
+  const kgMatch = raw.match(/^([0-9]+(?:\.[0-9]+)?)\s*kg$/);
+  if (kgMatch) {
+    const valInKg = parseFloat(kgMatch[1]);
+    if (isNaN(valInKg) || valInKg <= 0) return null;
+    return Math.round(valInKg * 1000) / 1000;
+  }
+
+  // Pure numeric or numeric prefix
+  const numMatch = raw.match(/^([0-9]+(?:\.[0-9]+)?)/);
+  if (!numMatch) return null;
+
+  const val = parseFloat(numMatch[1]);
+  if (isNaN(val) || val <= 0) return null;
+
+  return Math.round(val * 1000) / 1000;
+};
+
+// Fast inline editable table row for POS cart with Weight & Custom Price support
 const PosCartItemRow = ({
   item,
   canEditPrice,
@@ -33,21 +120,81 @@ const PosCartItemRow = ({
   onUpdatePrice,
   onRemove,
   onPriceCommittedFocusSearch,
+  itemFocusTrigger,
   showToast
 }) => {
+  const normUnit = normalizeUnit(item.unit);
+  const isWeight = isWeightedUnit(item.unit);
+  const unitLabel = getUnitRateLabel(item.unit);
+
   const orig = item.originalPrice !== undefined ? item.originalPrice : (item.price || 0);
   const currentBill = item.billPrice !== undefined ? item.billPrice : (item.price || 0);
-  const itemTotal = Math.round(currentBill * item.qty * 100) / 100;
+  const currentQty = Number(item.qty !== undefined ? item.qty : 1);
+  const itemTotal = Math.round(currentBill * currentQty * 100) / 100;
   const isOverridden = item.isPriceOverridden || Math.abs(currentBill - orig) > 0.001;
 
-  // Local input value so typing is immediate and smooth
+  // Local inputs for rapid and responsive typing
+  const [localWeight, setLocalWeight] = useState(currentQty.toString());
   const [localPrice, setLocalPrice] = useState(currentBill.toString());
+  const weightInputRef = useRef(null);
 
-  // Keep in sync with external cart state
+  // Sync state with cart changes
+  useEffect(() => {
+    setLocalWeight(currentQty.toString());
+  }, [currentQty]);
+
   useEffect(() => {
     setLocalPrice(currentBill.toString());
   }, [currentBill]);
 
+  // Auto-focus weight field when item is added/scanned
+  useEffect(() => {
+    if (itemFocusTrigger && itemFocusTrigger.id === item._id) {
+      if (weightInputRef.current) {
+        weightInputRef.current.focus();
+        weightInputRef.current.select();
+      }
+    }
+  }, [itemFocusTrigger, item._id]);
+
+  // Commit weight / quantity change
+  const commitWeightChange = () => {
+    const trimmed = localWeight.toString().trim();
+    if (trimmed === '') {
+      setLocalWeight(currentQty.toString());
+      return;
+    }
+    const parsed = parseWeightOrQty(trimmed, item.unit);
+    if (!parsed || parsed <= 0) {
+      if (showToast) showToast('Please enter a valid positive weight/quantity', 'error');
+      setLocalWeight(currentQty.toString());
+      return;
+    }
+    if (Math.abs(parsed - currentQty) > 0.0001) {
+      onUpdateQty(item._id, parsed);
+    }
+    setLocalWeight(parsed.toString());
+  };
+
+  const handleWeightKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitWeightChange();
+      e.target.blur();
+      if (onPriceCommittedFocusSearch) {
+        onPriceCommittedFocusSearch();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setLocalWeight(currentQty.toString());
+      e.target.blur();
+      if (onPriceCommittedFocusSearch) {
+        onPriceCommittedFocusSearch();
+      }
+    }
+  };
+
+  // Commit price change
   const commitPriceChange = () => {
     const trimmed = localPrice.trim();
     if (trimmed === '') {
@@ -67,7 +214,7 @@ const PosCartItemRow = ({
     setLocalPrice(safePrice.toString());
   };
 
-  const handleKeyDown = (e) => {
+  const handlePriceKeyDown = (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       commitPriceChange();
@@ -85,15 +232,42 @@ const PosCartItemRow = ({
     }
   };
 
+  // Quick weight presets for fast single-click weights
+  const presetWeights = isWeight
+    ? normUnit === 'litre'
+      ? [
+          { label: '0.5L', val: 0.5 },
+          { label: '1L', val: 1 },
+          { label: '2L', val: 2 }
+        ]
+      : [
+          { label: '0.25', val: 0.25, title: '250g / 0.25kg' },
+          { label: '0.5', val: 0.5, title: '500g / 0.5kg' },
+          { label: '1.0', val: 1, title: '1kg' },
+          { label: '1.5', val: 1.5, title: '1.5kg' },
+          { label: '2.0', val: 2, title: '2kg' }
+        ]
+    : null;
+
+  const handlePillSelect = (val) => {
+    onUpdateQty(item._id, val);
+    setLocalWeight(val.toString());
+    if (onPriceCommittedFocusSearch) {
+      onPriceCommittedFocusSearch();
+    }
+  };
+
   return (
     <tr className="hover:bg-slate-50/80 transition-colors">
       {/* Product Column */}
       <td className="py-2.5 px-2.5 max-w-[120px]">
-        <p className="font-bold text-slate-900 truncate leading-tight" title={item.name}>
+        <p className="font-bold text-slate-900 truncate leading-tight text-xs" title={item.name}>
           {item.name}
         </p>
         <div className="flex items-center gap-1.5 mt-0.5">
-          <span className="text-[10px] text-slate-400">{item.unit || 'pack'}</span>
+          <span className="text-[10px] text-slate-500 font-semibold uppercase bg-slate-100 px-1 py-0.2 rounded">
+            {unitLabel}
+          </span>
           {isOverridden && (
             <span className="inline-block px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
               Custom
@@ -102,32 +276,89 @@ const PosCartItemRow = ({
         </div>
       </td>
 
-      {/* Qty Column */}
-      <td className="py-2.5 px-1 text-center whitespace-nowrap">
-        <div className="inline-flex items-center border border-slate-200 rounded-md bg-slate-50">
-          <button
-            type="button"
-            onClick={() => onUpdateQty(item._id, item.qty - 1)}
-            className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-l cursor-pointer"
-            title="Decrease quantity"
-          >
-            -
-          </button>
-          <span className="w-5 text-center font-bold font-mono text-slate-900 text-[11px]">
-            {item.qty}
-          </span>
-          <button
-            type="button"
-            onClick={() => onUpdateQty(item._id, item.qty + 1)}
-            className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-r cursor-pointer"
-            title="Increase quantity"
-          >
-            +
-          </button>
-        </div>
+      {/* Qty / Weight Column: Direct Editable Field with Presets */}
+      <td className="py-2 px-1 text-center whitespace-nowrap">
+        {isWeight ? (
+          <div className="flex flex-col items-center gap-1">
+            <div className="relative inline-flex items-center rounded-lg border border-slate-300 bg-white hover:border-slate-400 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 shadow-2xs">
+              <input
+                ref={weightInputRef}
+                type="text"
+                inputMode="decimal"
+                value={localWeight}
+                onChange={(e) => setLocalWeight(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                onClick={(e) => e.target.select()}
+                onKeyDown={handleWeightKeyDown}
+                onBlur={commitWeightChange}
+                className="w-12 sm:w-14 py-1 pl-1.5 pr-0.5 text-right font-mono font-bold text-xs text-slate-900 bg-transparent focus:outline-none"
+                placeholder="1.0"
+                title="Enter weight (e.g. 1.5, 0.5, 500g, 250g) and press Enter"
+                aria-label={`Weight for ${item.name}`}
+              />
+              <span className="pr-1.5 pl-0.5 text-[10px] font-bold text-slate-500 select-none">
+                {unitLabel}
+              </span>
+            </div>
+
+            {/* Quick Weight Presets Pills */}
+            {presetWeights && (
+              <div className="flex items-center gap-0.5">
+                {presetWeights.map((p) => (
+                  <button
+                    key={p.val}
+                    type="button"
+                    onClick={() => handlePillSelect(p.val)}
+                    title={p.title || `Set to ${p.label} ${unitLabel}`}
+                    className={`px-1 py-0.2 rounded text-[9px] font-mono transition-colors cursor-pointer ${
+                      Math.abs(currentQty - p.val) < 0.001
+                        ? 'bg-emerald-600 text-white font-black shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold'
+                    }`}
+                  >
+                    {p.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="inline-flex items-center border border-slate-200 rounded-lg bg-slate-50 shadow-2xs">
+            <button
+              type="button"
+              onClick={() => onUpdateQty(item._id, Math.max(1, currentQty - 1))}
+              className="w-5 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-l cursor-pointer text-xs font-bold"
+              title="Decrease quantity"
+            >
+              -
+            </button>
+            <input
+              ref={weightInputRef}
+              type="text"
+              inputMode="numeric"
+              value={localWeight}
+              onChange={(e) => setLocalWeight(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              onClick={(e) => e.target.select()}
+              onKeyDown={handleWeightKeyDown}
+              onBlur={commitWeightChange}
+              className="w-7 py-0.5 text-center font-bold font-mono text-slate-900 text-xs bg-transparent focus:outline-none"
+              title="Enter quantity and press Enter"
+              aria-label={`Quantity for ${item.name}`}
+            />
+            <button
+              type="button"
+              onClick={() => onUpdateQty(item._id, currentQty + 1)}
+              className="w-5 h-6 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-r cursor-pointer text-xs font-bold"
+              title="Increase quantity"
+            >
+              +
+            </button>
+          </div>
+        )}
       </td>
 
-      {/* Price Column: Fast Editable Inline Input */}
+      {/* Price Column: Fast Editable Inline Input with /unit display */}
       <td className="py-2.5 px-1 text-right whitespace-nowrap">
         <div className="flex flex-col items-end">
           <div
@@ -148,9 +379,9 @@ const PosCartItemRow = ({
               onChange={(e) => setLocalPrice(e.target.value)}
               onFocus={(e) => e.target.select()}
               onClick={(e) => e.target.select()}
-              onKeyDown={handleKeyDown}
+              onKeyDown={handlePriceKeyDown}
               onBlur={commitPriceChange}
-              className="w-14 sm:w-16 py-1 pl-0.5 pr-1.5 text-right font-mono font-bold text-xs text-slate-900 bg-transparent focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
+              className="w-12 sm:w-14 py-1 pl-0.5 pr-0.5 text-right font-mono font-bold text-xs text-slate-900 bg-transparent focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
               title={
                 canEditPrice
                   ? 'Click to change price (Press Enter to apply & resume scanning)'
@@ -158,12 +389,17 @@ const PosCartItemRow = ({
               }
               aria-label={`Price for ${item.name}`}
             />
+            <span className="pr-1 text-[9px] font-bold text-slate-400 select-none">
+              /{unitLabel}
+            </span>
           </div>
 
           {/* Quick reset to regular catalog price if overridden */}
           {isOverridden && (
             <div className="flex items-center gap-1 mt-0.5">
-              <span className="text-[9px] text-slate-400 line-through font-mono">₹{orig}</span>
+              <span className="text-[9px] text-slate-400 line-through font-mono">
+                ₹{orig}/{unitLabel}
+              </span>
               <button
                 type="button"
                 onClick={() => {
@@ -182,7 +418,7 @@ const PosCartItemRow = ({
       </td>
 
       {/* Total Column */}
-      <td className="py-2.5 px-1.5 text-right font-mono font-black text-slate-900 whitespace-nowrap">
+      <td className="py-2.5 px-1.5 text-right font-mono font-black text-slate-900 whitespace-nowrap text-xs">
         ₹{itemTotal}
       </td>
 
@@ -219,6 +455,7 @@ export const OfflinePOS = () => {
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
+  const [itemFocusTrigger, setItemFocusTrigger] = useState(null);
 
   // Shift & Status
   const [shiftSummary, setShiftSummary] = useState({ totalShiftSales: 0, totalTransactions: 0, paymentTotals: {} });
@@ -280,15 +517,21 @@ export const OfflinePOS = () => {
     }
   };
 
-  // Cart operations
+  // Cart operations with Weight & Qty support
   const addToCart = (product) => {
     const existing = cart.find((item) => item._id === product._id);
+    const isWeight = isWeightedUnit(product.unit);
+
     if (existing) {
-      if (existing.qty >= (product.stockCount || 50)) {
-        showToast(`Cannot add more. Only ${product.stockCount} available in stock.`, 'error');
+      const currentQty = Number(existing.qty || 1);
+      const stock = product.stockCount !== undefined ? product.stockCount : 50;
+      if (!isWeight && currentQty >= stock) {
+        showToast(`Cannot add more. Only ${stock} ${product.unit || 'units'} available in stock.`, 'error');
         return;
       }
-      setCart(cart.map((item) => (item._id === product._id ? { ...item, qty: item.qty + 1 } : item)));
+      // For piece items, add 1. For weight items, retain current qty and focus weight field so cashier enters weight
+      const newQty = isWeight ? currentQty : currentQty + 1;
+      setCart(cart.map((item) => (item._id === product._id ? { ...item, qty: newQty } : item)));
     } else {
       const catalogPrice = Number(product.price || 0);
       setCart([
@@ -299,24 +542,30 @@ export const OfflinePOS = () => {
           billPrice: catalogPrice,
           price: catalogPrice,
           isPriceOverridden: false,
-          qty: 1
+          qty: 1,
+          unit: product.unit || 'piece'
         }
       ]);
     }
-    showToast(`Added "${product.name}" to bill`);
+
+    // Auto-focus weight field for rapid cashier entry
+    setItemFocusTrigger({ id: product._id, time: Date.now() });
+    showToast(`Added "${product.name}" (${getUnitRateLabel(product.unit)}) to bill`);
   };
 
-  const updateCartQty = (productId, newQty) => {
-    if (newQty <= 0) {
+  const updateCartQty = (productId, newQtyRaw) => {
+    const parsed = Number(newQtyRaw);
+    if (isNaN(parsed) || parsed <= 0) {
       removeFromCart(productId);
       return;
     }
+    const cleanQty = Math.round(parsed * 1000) / 1000;
     const prod = products.find((p) => p._id === productId);
-    if (prod && newQty > (prod.stockCount || 50)) {
-      showToast(`Only ${prod.stockCount} units in stock`, 'error');
+    if (prod && cleanQty > (prod.stockCount || 50)) {
+      showToast(`Only ${prod.stockCount} ${prod.unit || 'units'} in stock`, 'error');
       return;
     }
-    setCart(cart.map((item) => (item._id === productId ? { ...item, qty: newQty } : item)));
+    setCart(cart.map((item) => (item._id === productId ? { ...item, qty: cleanQty } : item)));
   };
 
   const removeFromCart = (productId) => {
@@ -365,7 +614,7 @@ export const OfflinePOS = () => {
     showToast(`Price set to ₹${roundedPrice} for current bill`);
   };
 
-  // Re-focus search/barcode scanner after pressing Enter on price
+  // Re-focus search/barcode scanner after pressing Enter on price or weight
   const handlePriceCommittedFocusSearch = () => {
     if (searchInputRef.current) {
       searchInputRef.current.focus();
@@ -373,15 +622,21 @@ export const OfflinePOS = () => {
     }
   };
 
-  // Calculations using the per-item billing price
-  const subtotal = cart.reduce(
-    (acc, item) => acc + (Number(item.billPrice !== undefined ? item.billPrice : item.price) || 0) * (item.qty || 1),
-    0
-  );
+  // Precise calculations using per-item billing price and decimal weight/qty
+  const subtotal = Math.round(
+    cart.reduce(
+      (acc, item) =>
+        acc +
+        (Number(item.billPrice !== undefined ? item.billPrice : item.price) || 0) *
+          (Number(item.qty !== undefined ? item.qty : 1) || 0),
+      0
+    ) * 100
+  ) / 100;
+
   const safeDiscount = Math.min(Number(discountAmount) || 0, subtotal);
-  const finalTotal = Math.max(0, subtotal - safeDiscount);
+  const finalTotal = Math.max(0, Math.round((subtotal - safeDiscount) * 100) / 100);
   const tenderedNum = Number(amountTendered) || 0;
-  const changeDue = Math.max(0, tenderedNum - finalTotal);
+  const changeDue = Math.max(0, Math.round((tenderedNum - finalTotal) * 100) / 100);
 
   // Submit sale transaction
   const handleCompleteSale = async () => {
@@ -400,16 +655,18 @@ export const OfflinePOS = () => {
       const payload = {
         items: cart.map((item) => {
           const currentBillPrice = item.billPrice !== undefined ? item.billPrice : item.price;
+          const cleanQty = Math.round(Number(item.qty !== undefined ? item.qty : 1) * 1000) / 1000;
           return {
             product: item._id,
             name: item.name,
-            qty: item.qty,
+            qty: cleanQty,
+            quantity: cleanQty,
             originalPrice: item.originalPrice !== undefined ? item.originalPrice : item.price,
             billingPrice: currentBillPrice,
             billPrice: currentBillPrice,
             price: currentBillPrice,
             category: item.category,
-            unit: item.unit
+            unit: item.unit || 'piece'
           };
         }),
         paymentMethod,
@@ -584,14 +841,21 @@ export const OfflinePOS = () => {
                       </div>
 
                       <h4 className="text-xs font-bold text-slate-900 truncate">{p.name}</h4>
-                      <p className="text-[10px] text-slate-500 mt-0.5">{p.unit}</p>
+                      <div className="flex items-center gap-1 mt-0.5">
+                        <span className="text-[10px] text-slate-500 capitalize">{p.unit || 'piece'}</span>
+                        {isWeightedUnit(p.unit) && (
+                          <span className="inline-flex items-center gap-0.5 text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                            <Scale className="w-2.5 h-2.5" /> Weight
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-100">
                         <span className="text-xs sm:text-sm font-black text-slate-900">
-                          ₹{p.price}
+                          ₹{p.price} <span className="text-[10px] font-normal text-slate-500">/ {getUnitRateLabel(p.unit)}</span>
                         </span>
                         <button
                           type="button"
-                          className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shadow-xs hover:bg-emerald-700 active:scale-90 transition-transform"
+                          className="w-6 h-6 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-xs font-bold shadow-xs hover:bg-emerald-700 active:scale-90 transition-transform cursor-pointer"
                         >
                           +
                         </button>
@@ -660,7 +924,7 @@ export const OfflinePOS = () => {
                 <thead className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 border-b border-slate-200">
                   <tr>
                     <th className="py-2 px-2.5">Product</th>
-                    <th className="py-2 px-1 text-center">Qty</th>
+                    <th className="py-2 px-1 text-center">Qty / Weight</th>
                     <th className="py-2 px-1 text-right">Price</th>
                     <th className="py-2 px-1.5 text-right">Total</th>
                     <th className="py-2 px-1 text-center w-8"></th>
@@ -676,6 +940,7 @@ export const OfflinePOS = () => {
                       onUpdatePrice={updateItemPrice}
                       onRemove={removeFromCart}
                       onPriceCommittedFocusSearch={handlePriceCommittedFocusSearch}
+                      itemFocusTrigger={itemFocusTrigger}
                       showToast={showToast}
                     />
                   ))}
@@ -750,7 +1015,7 @@ export const OfflinePOS = () => {
             {/* Bill Totals Summary */}
             <div className="p-3 rounded-2xl bg-slate-50 border border-slate-200/80 space-y-1 text-xs">
               <div className="flex justify-between text-slate-500">
-                <span>Subtotal ({cart.reduce((a, b) => a + b.qty, 0)} items)</span>
+                <span>Subtotal ({cart.length} item{cart.length === 1 ? '' : 's'})</span>
                 <span>₹{subtotal.toLocaleString()}</span>
               </div>
               {safeDiscount > 0 && (
@@ -812,21 +1077,22 @@ export const OfflinePOS = () => {
                 const isOverridden =
                   it.isPriceOverridden ||
                   (it.originalPrice && Math.abs(it.price - it.originalPrice) > 0.001);
+                const uLabel = getUnitRateLabel(it.unit);
                 return (
                   <div key={idx} className="pt-1 flex justify-between">
                     <div>
                       <p className="font-bold text-slate-900">{it.name}</p>
                       <span className="text-[10px] text-slate-500">
-                        {it.qty} × ₹{it.price}
+                        {it.qty} {uLabel} × ₹{it.price} / {uLabel}
                         {isOverridden && (
                           <span className="text-amber-800 font-semibold ml-1">
-                            (Reg. ₹{it.originalPrice})
+                            (Reg. ₹{it.originalPrice} / {uLabel})
                           </span>
                         )}
                       </span>
                     </div>
                     <span className="font-mono font-bold text-slate-800">
-                      ₹{it.itemTotal !== undefined ? it.itemTotal : it.price * it.qty}
+                      ₹{it.itemTotal !== undefined ? it.itemTotal : Math.round(it.price * it.qty * 100) / 100}
                     </span>
                   </div>
                 );

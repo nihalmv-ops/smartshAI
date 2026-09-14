@@ -74,9 +74,9 @@ export const createOfflineSale = async (req, res, next) => {
 
       if (requestedPrice !== undefined && requestedPrice !== null && requestedPrice !== '') {
         const parsedPrice = Number(requestedPrice);
-        if (isNaN(parsedPrice) || parsedPrice < 0) {
+        if (isNaN(parsedPrice) || parsedPrice <= 0) {
           res.status(400);
-          throw new Error(`Invalid billing price for product "${name}": must be a valid non-negative number`);
+          throw new Error(`Invalid billing price for product "${name}": must be a valid positive number`);
         }
         actualBillingPrice = Math.round(parsedPrice * 100) / 100;
         if (Math.abs(actualBillingPrice - catalogPrice) > 0.001) {

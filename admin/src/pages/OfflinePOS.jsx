@@ -18,14 +18,193 @@ import {
   Barcode,
   Sparkles,
   Layers,
-  X,
-  Edit3
+  X
 } from 'lucide-react';
 import { posService } from '../services/posService';
 import { categoryService, defaultCategories } from '../services/categoryService';
 import { AdminHeader } from '../components/layout/AdminHeader';
+import { useAdminAuth } from '../context/AdminAuthContext';
+
+// Fast inline editable table row for POS cart
+const PosCartItemRow = ({
+  item,
+  canEditPrice,
+  onUpdateQty,
+  onUpdatePrice,
+  onRemove,
+  onPriceCommittedFocusSearch,
+  showToast
+}) => {
+  const orig = item.originalPrice !== undefined ? item.originalPrice : (item.price || 0);
+  const currentBill = item.billPrice !== undefined ? item.billPrice : (item.price || 0);
+  const itemTotal = Math.round(currentBill * item.qty * 100) / 100;
+  const isOverridden = item.isPriceOverridden || Math.abs(currentBill - orig) > 0.001;
+
+  // Local input value so typing is immediate and smooth
+  const [localPrice, setLocalPrice] = useState(currentBill.toString());
+
+  // Keep in sync with external cart state
+  useEffect(() => {
+    setLocalPrice(currentBill.toString());
+  }, [currentBill]);
+
+  const commitPriceChange = () => {
+    const trimmed = localPrice.trim();
+    if (trimmed === '') {
+      setLocalPrice(currentBill.toString());
+      return;
+    }
+    const parsed = Number(trimmed);
+    if (isNaN(parsed) || parsed <= 0) {
+      if (showToast) showToast('Price must be a valid positive number', 'error');
+      setLocalPrice(currentBill.toString());
+      return;
+    }
+    const safePrice = Math.round(parsed * 100) / 100;
+    if (Math.abs(safePrice - currentBill) > 0.001) {
+      onUpdatePrice(item._id, safePrice);
+    }
+    setLocalPrice(safePrice.toString());
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      commitPriceChange();
+      e.target.blur();
+      if (onPriceCommittedFocusSearch) {
+        onPriceCommittedFocusSearch();
+      }
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      setLocalPrice(currentBill.toString());
+      e.target.blur();
+      if (onPriceCommittedFocusSearch) {
+        onPriceCommittedFocusSearch();
+      }
+    }
+  };
+
+  return (
+    <tr className="hover:bg-slate-50/80 transition-colors">
+      {/* Product Column */}
+      <td className="py-2.5 px-2.5 max-w-[120px]">
+        <p className="font-bold text-slate-900 truncate leading-tight" title={item.name}>
+          {item.name}
+        </p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <span className="text-[10px] text-slate-400">{item.unit || 'pack'}</span>
+          {isOverridden && (
+            <span className="inline-block px-1.5 py-0.2 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
+              Custom
+            </span>
+          )}
+        </div>
+      </td>
+
+      {/* Qty Column */}
+      <td className="py-2.5 px-1 text-center whitespace-nowrap">
+        <div className="inline-flex items-center border border-slate-200 rounded-md bg-slate-50">
+          <button
+            type="button"
+            onClick={() => onUpdateQty(item._id, item.qty - 1)}
+            className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-l cursor-pointer"
+            title="Decrease quantity"
+          >
+            -
+          </button>
+          <span className="w-5 text-center font-bold font-mono text-slate-900 text-[11px]">
+            {item.qty}
+          </span>
+          <button
+            type="button"
+            onClick={() => onUpdateQty(item._id, item.qty + 1)}
+            className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-r cursor-pointer"
+            title="Increase quantity"
+          >
+            +
+          </button>
+        </div>
+      </td>
+
+      {/* Price Column: Fast Editable Inline Input */}
+      <td className="py-2.5 px-1 text-right whitespace-nowrap">
+        <div className="flex flex-col items-end">
+          <div
+            className={`relative inline-flex items-center rounded-lg border transition-all ${
+              isOverridden
+                ? 'border-amber-400 bg-amber-50/70 ring-1 ring-amber-300/60'
+                : 'border-slate-300 bg-white hover:border-slate-400 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20'
+            }`}
+          >
+            <span className="pl-1.5 text-[11px] font-bold text-slate-400 select-none">₹</span>
+            <input
+              type="number"
+              step="0.5"
+              min="0.01"
+              disabled={!canEditPrice}
+              readOnly={!canEditPrice}
+              value={localPrice}
+              onChange={(e) => setLocalPrice(e.target.value)}
+              onFocus={(e) => e.target.select()}
+              onClick={(e) => e.target.select()}
+              onKeyDown={handleKeyDown}
+              onBlur={commitPriceChange}
+              className="w-14 sm:w-16 py-1 pl-0.5 pr-1.5 text-right font-mono font-bold text-xs text-slate-900 bg-transparent focus:outline-none disabled:opacity-75 disabled:cursor-not-allowed"
+              title={
+                canEditPrice
+                  ? 'Click to change price (Press Enter to apply & resume scanning)'
+                  : 'Requires admin or staff permission to edit price'
+              }
+              aria-label={`Price for ${item.name}`}
+            />
+          </div>
+
+          {/* Quick reset to regular catalog price if overridden */}
+          {isOverridden && (
+            <div className="flex items-center gap-1 mt-0.5">
+              <span className="text-[9px] text-slate-400 line-through font-mono">₹{orig}</span>
+              <button
+                type="button"
+                onClick={() => {
+                  onUpdatePrice(item._id, orig);
+                  setLocalPrice(orig.toString());
+                }}
+                title={`Reset to catalog price ₹${orig}`}
+                className="text-[9px] text-amber-700 hover:text-amber-900 font-bold hover:underline cursor-pointer flex items-center gap-0.5"
+              >
+                <RotateCcw className="w-2.5 h-2.5" />
+                <span>Reset</span>
+              </button>
+            </div>
+          )}
+        </div>
+      </td>
+
+      {/* Total Column */}
+      <td className="py-2.5 px-1.5 text-right font-mono font-black text-slate-900 whitespace-nowrap">
+        ₹{itemTotal}
+      </td>
+
+      {/* Action Column: Delete */}
+      <td className="py-2.5 px-1 text-center whitespace-nowrap">
+        <button
+          type="button"
+          onClick={() => onRemove(item._id)}
+          className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
+          title="Remove item"
+        >
+          <X className="w-3.5 h-3.5" />
+        </button>
+      </td>
+    </tr>
+  );
+};
 
 export const OfflinePOS = () => {
+  const { user } = useAdminAuth();
+  const canEditPrice = user?.role === 'admin' || user?.role === 'staff';
+
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState(defaultCategories);
   const [loading, setLoading] = useState(true);
@@ -40,10 +219,6 @@ export const OfflinePOS = () => {
   const [customerName, setCustomerName] = useState('Walk-in Customer');
   const [customerPhone, setCustomerPhone] = useState('');
   const [notes, setNotes] = useState('');
-
-  // Per-item temporary price edit modal state
-  const [editingItem, setEditingItem] = useState(null);
-  const [tempBillingPrice, setTempBillingPrice] = useState('');
 
   // Shift & Status
   const [shiftSummary, setShiftSummary] = useState({ totalShiftSales: 0, totalTransactions: 0, paymentTotals: {} });
@@ -153,54 +328,49 @@ export const OfflinePOS = () => {
     setDiscountAmount(0);
     setAmountTendered('');
     setNotes('');
-    setEditingItem(null);
   };
 
-  // Open Edit Price modal for a specific bill item
-  const handleOpenPriceEdit = (item) => {
-    setEditingItem(item);
-    setTempBillingPrice((item.billPrice !== undefined ? item.billPrice : item.price).toString());
-  };
+  // Fast inline price update for current bill only
+  const updateItemPrice = (productId, newPriceRaw) => {
+    if (!canEditPrice) {
+      showToast('Permission denied: Only admin and staff can change billing price', 'error');
+      return;
+    }
 
-  // Save the custom billing price for this bill ONLY
-  const handleSaveBillingPrice = (e) => {
-    if (e) e.preventDefault();
-    if (!editingItem) return;
-
-    const parsed = Number(tempBillingPrice);
-    if (tempBillingPrice === '' || isNaN(parsed) || parsed < 0) {
+    const parsed = Number(newPriceRaw);
+    if (newPriceRaw === '' || isNaN(parsed) || parsed <= 0) {
       showToast('Please enter a valid positive billing price', 'error');
       return;
     }
 
     const roundedPrice = Math.round(parsed * 100) / 100;
-    const isOverridden = Math.abs(roundedPrice - editingItem.originalPrice) > 0.001;
 
-    setCart(
-      cart.map((item) =>
-        item._id === editingItem._id
-          ? {
-              ...item,
-              billPrice: roundedPrice,
-              price: roundedPrice,
-              isPriceOverridden: isOverridden
-            }
-          : item
-      )
+    setCart((prevCart) =>
+      prevCart.map((item) => {
+        if (item._id === productId) {
+          const orig = item.originalPrice !== undefined ? item.originalPrice : (item.price || 0);
+          const isOverridden = Math.abs(roundedPrice - orig) > 0.001;
+          return {
+            ...item,
+            billPrice: roundedPrice,
+            price: roundedPrice,
+            sellingPrice: roundedPrice,
+            isPriceOverridden: isOverridden
+          };
+        }
+        return item;
+      })
     );
 
-    setEditingItem(null);
-    showToast(
-      isOverridden
-        ? `Billing price updated to ₹${roundedPrice} for "${editingItem.name}" (Original: ₹${editingItem.originalPrice})`
-        : `Reset to catalog price ₹${roundedPrice} for "${editingItem.name}"`
-    );
+    showToast(`Price set to ₹${roundedPrice} for current bill`);
   };
 
-  // Reset to original catalog price inside modal
-  const handleResetBillingPrice = () => {
-    if (!editingItem) return;
-    setTempBillingPrice(editingItem.originalPrice.toString());
+  // Re-focus search/barcode scanner after pressing Enter on price
+  const handlePriceCommittedFocusSearch = () => {
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
+      searchInputRef.current.select?.();
+    }
   };
 
   // Calculations using the per-item billing price
@@ -486,115 +656,29 @@ export const OfflinePOS = () => {
                 Cart is empty. Tap items or scan barcodes to add.
               </div>
             ) : (
-              <table className="w-full text-left text-xs min-w-[340px]">
+              <table className="w-full text-left text-xs min-w-[320px]">
                 <thead className="bg-slate-100 text-[10px] font-bold text-slate-500 uppercase tracking-wider sticky top-0 border-b border-slate-200">
                   <tr>
                     <th className="py-2 px-2.5">Product</th>
                     <th className="py-2 px-1 text-center">Qty</th>
-                    <th className="py-2 px-1 text-right">Original Price</th>
-                    <th className="py-2 px-1 text-right">Bill Price</th>
+                    <th className="py-2 px-1 text-right">Price</th>
                     <th className="py-2 px-1.5 text-right">Total</th>
-                    <th className="py-2 px-1 text-center">Action</th>
+                    <th className="py-2 px-1 text-center w-8"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200/70 bg-white">
-                  {cart.map((item) => {
-                    const orig = item.originalPrice !== undefined ? item.originalPrice : item.price;
-                    const currentBill = item.billPrice !== undefined ? item.billPrice : item.price;
-                    const itemTotal = Math.round(currentBill * item.qty * 100) / 100;
-                    const isOverridden = item.isPriceOverridden || Math.abs(currentBill - orig) > 0.001;
-
-                    return (
-                      <tr key={item._id} className="hover:bg-slate-50/80 transition-colors">
-                        {/* Product Column */}
-                        <td className="py-2.5 px-2.5 max-w-[110px]">
-                          <p className="font-bold text-slate-900 truncate leading-tight" title={item.name}>
-                            {item.name}
-                          </p>
-                          {isOverridden ? (
-                            <span className="inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-black bg-amber-100 text-amber-900 border border-amber-300">
-                              Custom ₹{currentBill}
-                            </span>
-                          ) : (
-                            <span className="text-[10px] text-slate-400">{item.unit || 'pack'}</span>
-                          )}
-                        </td>
-
-                        {/* Qty Column */}
-                        <td className="py-2.5 px-1 text-center whitespace-nowrap">
-                          <div className="inline-flex items-center border border-slate-200 rounded-md bg-slate-50">
-                            <button
-                              type="button"
-                              onClick={() => updateCartQty(item._id, item.qty - 1)}
-                              className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-l cursor-pointer"
-                            >
-                              -
-                            </button>
-                            <span className="w-5 text-center font-bold font-mono text-slate-900 text-[11px]">
-                              {item.qty}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => updateCartQty(item._id, item.qty + 1)}
-                              className="w-5 h-5 flex items-center justify-center text-slate-600 hover:bg-slate-200 rounded-r cursor-pointer"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </td>
-
-                        {/* Original Price Column */}
-                        <td className="py-2.5 px-1 text-right font-mono text-slate-500 whitespace-nowrap">
-                          {isOverridden ? (
-                            <span className="line-through text-slate-400">₹{orig}</span>
-                          ) : (
-                            <span>₹{orig}</span>
-                          )}
-                        </td>
-
-                        {/* Bill Price Column */}
-                        <td className="py-2.5 px-1 text-right font-mono font-bold whitespace-nowrap">
-                          <span
-                            className={
-                              isOverridden
-                                ? 'text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200 font-black'
-                                : 'text-slate-800'
-                            }
-                          >
-                            ₹{currentBill}
-                          </span>
-                        </td>
-
-                        {/* Total Column */}
-                        <td className="py-2.5 px-1.5 text-right font-mono font-black text-slate-900 whitespace-nowrap">
-                          ₹{itemTotal}
-                        </td>
-
-                        {/* Action Column: Edit & Delete */}
-                        <td className="py-2.5 px-1 text-center whitespace-nowrap">
-                          <div className="inline-flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenPriceEdit(item)}
-                              className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-700 hover:text-emerald-800 text-[11px] font-bold border border-slate-200 hover:border-emerald-300 transition-colors cursor-pointer flex items-center gap-0.5"
-                              title="Edit price for this bill"
-                            >
-                              <Edit3 className="w-3 h-3" />
-                              <span>Edit</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => removeFromCart(item._id)}
-                              className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded transition-colors cursor-pointer"
-                              title="Remove item"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {cart.map((item) => (
+                    <PosCartItemRow
+                      key={item._id}
+                      item={item}
+                      canEditPrice={canEditPrice}
+                      onUpdateQty={updateCartQty}
+                      onUpdatePrice={updateItemPrice}
+                      onRemove={removeFromCart}
+                      onPriceCommittedFocusSearch={handlePriceCommittedFocusSearch}
+                      showToast={showToast}
+                    />
+                  ))}
                 </tbody>
               </table>
             )}
@@ -703,108 +787,6 @@ export const OfflinePOS = () => {
           </div>
         </div>
       </main>
-
-      {/* Edit Item Billing Price Modal (Applies ONLY to current bill) */}
-      {editingItem && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
-          <div className="bg-white rounded-3xl max-w-sm w-full p-5 shadow-2xl border border-slate-100 text-slate-900 space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold">
-                  <Edit3 className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900">Edit Billing Price</h3>
-                  <p className="text-[11px] text-slate-500 truncate max-w-[200px]">{editingItem.name}</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingItem(null)}
-                className="p-1.5 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveBillingPrice} className="space-y-3.5">
-              <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-1.5 text-xs">
-                <div className="flex justify-between items-center text-slate-600">
-                  <span className="font-semibold">Original Price:</span>
-                  <span className="font-bold text-slate-900 font-mono text-sm">₹{editingItem.originalPrice}</span>
-                </div>
-                <div className="flex justify-between items-center text-slate-500">
-                  <span>Quantity:</span>
-                  <span className="font-bold text-slate-800 font-mono">{editingItem.qty} units</span>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Billing Price (₹):
-                </label>
-                <div className="relative">
-                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-bold text-slate-400 text-sm">₹</span>
-                  <input
-                    type="number"
-                    step="0.5"
-                    min="0"
-                    required
-                    autoFocus
-                    value={tempBillingPrice}
-                    onChange={(e) => setTempBillingPrice(e.target.value)}
-                    placeholder={editingItem.originalPrice.toString()}
-                    className="w-full pl-8 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-                  />
-                </div>
-                <p className="text-[10px] text-amber-700 mt-1 font-medium leading-tight">
-                  ⚠️ Applies ONLY to this current bill. MongoDB catalog price remains ₹{editingItem.originalPrice}.
-                </p>
-              </div>
-
-              {/* Live Calculation Preview */}
-              {tempBillingPrice !== '' && !isNaN(Number(tempBillingPrice)) && (
-                <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between text-xs">
-                  <span className="font-bold text-emerald-900">New Item Total:</span>
-                  <span className="font-black text-emerald-800 font-mono text-sm">
-                    ₹{Math.round(Number(tempBillingPrice) * editingItem.qty * 100) / 100}
-                  </span>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-2 border-t border-slate-100 gap-2">
-                {Number(tempBillingPrice) !== editingItem.originalPrice ? (
-                  <button
-                    type="button"
-                    onClick={handleResetBillingPrice}
-                    className="px-2.5 py-1.5 text-[11px] font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
-                  >
-                    Reset to ₹{editingItem.originalPrice}
-                  </button>
-                ) : (
-                  <div />
-                )}
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingItem(null)}
-                    className="px-3 py-1.5 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                  >
-                    Save
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Printable Receipt Modal */}
       {completedReceipt && (

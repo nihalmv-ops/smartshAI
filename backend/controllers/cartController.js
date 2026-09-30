@@ -32,12 +32,13 @@ export const saveCart = async (req, res, next) => {
       throw new Error('Items must be an array of cart items');
     }
 
-    // Format items to store product ID and quantity
+    // Format items to store product ID, quantity, and weightInGrams
     const formattedItems = items
-      .filter(item => item && (item.product || item._id || item.id))
-      .map(item => ({
+      .filter((item) => item && (item.product || item._id || item.id))
+      .map((item) => ({
         product: item.product || item._id || item.id,
-        quantity: Math.max(1, Number(item.quantity) || 1)
+        quantity: Math.max(1, Number(item.quantity) || 1),
+        weightInGrams: Number(item.weightInGrams) || 0
       }));
 
     let cart = await Cart.findOne({ user: req.user._id });

@@ -11,6 +11,10 @@ const cartItemSchema = new mongoose.Schema({
     required: true,
     default: 1,
     min: 1
+  },
+  weightInGrams: {
+    type: Number,
+    default: 0
   }
 });
 

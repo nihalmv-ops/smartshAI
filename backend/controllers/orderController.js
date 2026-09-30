@@ -1,6 +1,7 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import Settings from '../models/Settings.js';
+import { isWeightProduct } from '../utils/weightUtils.js';
 
 // @desc    Create new order
 // @route   POST /api/orders
@@ -38,30 +39,66 @@ export const createOrder = async (req, res, next) => {
       const pId = (item.product || item._id || item.id || '').toString();
       const dbProduct = productMap.get(pId);
 
-      const itemPrice = dbProduct ? Number(dbProduct.price) : Number(item.price || 0);
+      const catalogPrice = dbProduct ? Number(dbProduct.price) : Number(item.price || 0);
       const costPrice = dbProduct
-        ? Number(dbProduct.costPrice || Math.round(itemPrice * 0.75))
-        : Math.round(itemPrice * 0.75);
+        ? Number(dbProduct.costPrice || Math.round(catalogPrice * 0.75))
+        : Math.round(catalogPrice * 0.75);
       const itemName = dbProduct ? dbProduct.name : (item.name || 'Product');
       const itemCategory = dbProduct ? dbProduct.category : (item.category || 'grocery');
       const itemImage = dbProduct ? dbProduct.image : (item.image || '');
       const itemUnit = dbProduct ? dbProduct.unit : (item.unit || '');
       const qty = Math.max(1, Number(item.qty || item.quantity || 1));
 
-      calculatedItemsPrice += itemPrice * qty;
-      calculatedTotalCost += costPrice * qty;
+      const isWeight = dbProduct
+        ? dbProduct.isWeightBased || isWeightProduct(dbProduct)
+        : isWeightProduct(item);
+
+      let weightInGrams = Number(item.weightInGrams || item.weight || 0);
+      if (isWeight && weightInGrams <= 0) {
+        // Fallback default: 1000g (1 kg)
+        weightInGrams = 1000;
+      }
+
+      let lineTotal = 0;
+      let lineCost = 0;
+
+      if (isWeight && weightInGrams > 0) {
+        // Price formula: (pricePerKg / 1000) * weightInGrams * quantity
+        const pricePerGram = catalogPrice / 1000;
+        const costPerGram = costPrice / 1000;
+        lineTotal = Math.round(pricePerGram * weightInGrams * qty * 100) / 100;
+        lineCost = Math.round(costPerGram * weightInGrams * qty * 100) / 100;
+      } else {
+        lineTotal = Math.round(catalogPrice * qty * 100) / 100;
+        lineCost = Math.round(costPrice * qty * 100) / 100;
+      }
+
+      calculatedItemsPrice += lineTotal;
+      calculatedTotalCost += lineCost;
 
       return {
         product: dbProduct ? dbProduct._id : item.product || item._id,
+        productId: dbProduct ? dbProduct._id : item.product || item._id,
         name: itemName,
+        productName: itemName,
         image: itemImage,
-        price: itemPrice,
+        price: catalogPrice,
+        sellingPrice: catalogPrice,
+        originalPrice: dbProduct?.originalPrice || catalogPrice,
         costPrice,
+        itemTotal: lineTotal,
         category: itemCategory,
         unit: itemUnit,
-        qty
+        weightInGrams: isWeight ? weightInGrams : 0,
+        isWeightBased: isWeight,
+        qty,
+        quantity: qty
       };
     });
+
+    // Round financial summaries safely
+    calculatedItemsPrice = Math.round(calculatedItemsPrice * 100) / 100;
+    calculatedTotalCost = Math.round(calculatedTotalCost * 100) / 100;
 
     // Fetch dynamic store delivery settings
     const settings = await Settings.getSettings();
@@ -70,8 +107,8 @@ export const createOrder = async (req, res, next) => {
 
     const deliveryFee = calculatedItemsPrice >= freeThreshold ? 0 : standardFee;
     const safeDiscount = Math.max(0, Math.min(Number(discount) || 0, calculatedItemsPrice));
-    const totalPrice = Math.max(0, calculatedItemsPrice - safeDiscount + deliveryFee);
-    const grossProfit = Math.max(0, calculatedItemsPrice - safeDiscount - calculatedTotalCost);
+    const totalPrice = Math.max(0, Math.round((calculatedItemsPrice - safeDiscount + deliveryFee) * 100) / 100);
+    const grossProfit = Math.max(0, Math.round((calculatedItemsPrice - safeDiscount - calculatedTotalCost) * 100) / 100);
 
     const isWhatsApp = orderChannel === 'whatsapp';
     const initialStatus = isWhatsApp ? 'WhatsApp Pending' : 'Pending';
@@ -101,16 +138,18 @@ export const createOrder = async (req, res, next) => {
 
     const createdOrder = await order.save();
 
-    // Decrement product stock in MongoDB
+    // Decrement product stock in MongoDB with exact 3-decimal precision
     for (const item of verifiedOrderItems) {
       if (item.product) {
-        const prod = await Product.findByIdAndUpdate(
-          item.product,
-          { $inc: { stockCount: -item.qty } },
-          { new: true }
-        );
-        if (prod && prod.stockCount <= 0) {
-          prod.inStock = false;
+        const prod = await Product.findById(item.product);
+        if (prod) {
+          const deduction = item.isWeightBased && item.weightInGrams > 0
+            ? (item.weightInGrams * item.qty) / 1000
+            : item.qty;
+          prod.stockCount = Math.round((prod.stockCount - deduction) * 1000) / 1000;
+          if (prod.stockCount <= 0) {
+            prod.inStock = false;
+          }
           await prod.save();
         }
       }

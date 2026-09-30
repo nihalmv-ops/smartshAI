@@ -15,6 +15,8 @@ import {
 import { categories } from '../data/categories';
 import { productService } from '../services/productService';
 import { ProductCard } from '../components/common/ProductCard';
+import { useCart } from '../context/CartContext';
+import { isWeightProduct, calculateWeightPrice } from '../utils/weightUtils';
 
 export const Products = ({ 
   navigateTo: propNavigateTo, 
@@ -24,12 +26,15 @@ export const Products = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { addToCart } = useCart();
 
   const urlQuery = searchParams.get('search') || initialSearch || '';
   const urlCategory = searchParams.get('category') || initialCategory || 'all';
 
   const [selectedCategory, setSelectedCategory] = useState(urlCategory);
   const [searchQuery, setSearchQuery] = useState(urlQuery);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [suggestionItems, setSuggestionItems] = useState([]);
   const [maxPrice, setMaxPrice] = useState(300);
   const [minRating, setMinRating] = useState(0);
   const [inStockOnly, setInStockOnly] = useState(false);
@@ -58,6 +63,7 @@ export const Products = ({
 
   const handleSearchInputChange = (val) => {
     setSearchQuery(val);
+    setShowSuggestions(val.trim().length > 0);
     const newParams = new URLSearchParams(searchParams);
     if (!val) {
       newParams.delete('search');
@@ -86,6 +92,7 @@ export const Products = ({
         });
         if (isMounted && res && res.products) {
           setProducts(res.products);
+          setSuggestionItems(res.products.slice(0, 6));
           setError(null);
         }
       } catch (err) {
@@ -97,7 +104,7 @@ export const Products = ({
 
     const debounceTimer = setTimeout(() => {
       fetchProducts();
-    }, 200);
+    }, 150);
 
     return () => {
       isMounted = false;
@@ -285,24 +292,116 @@ export const Products = ({
           {/* Product Listing Area */}
           <div className="lg:col-span-3 space-y-5">
             
-            {/* Search Bar on Products Page */}
-            <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-soft flex items-center gap-3">
-              <Search className="w-5 h-5 text-slate-400 pl-1" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => handleSearchInputChange(e.target.value)}
-                placeholder="Search products by name (e.g. Milk, Tomatoes, Lay's, Eggs)..."
-                className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => handleSearchInputChange('')}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
-                  title="Clear search"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            {/* Search Bar on Products Page with Live Product Suggestions */}
+            <div className="relative z-30">
+              <div className="bg-white rounded-2xl p-3 border border-slate-200/80 shadow-soft flex items-center gap-3">
+                <Search className="w-5 h-5 text-slate-400 pl-1" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onFocus={() => {
+                    if (searchQuery.trim().length > 0) setShowSuggestions(true);
+                  }}
+                  onBlur={() => setTimeout(() => setShowSuggestions(false), 180)}
+                  onChange={(e) => handleSearchInputChange(e.target.value)}
+                  placeholder="Search products by name (e.g. Milk, Tomatoes, Lay's, Eggs)..."
+                  className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => {
+                      handleSearchInputChange('');
+                      setShowSuggestions(false);
+                    }}
+                    className="p-1 text-slate-400 hover:text-slate-600 rounded-lg"
+                    title="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* Live Product Search Suggestion Dropdown */}
+              {showSuggestions && searchQuery.trim().length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl border border-slate-200 shadow-2xl overflow-hidden z-40">
+                  <div className="px-4 py-2 bg-slate-50 border-b border-slate-100 flex items-center justify-between text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                    <span>Product Suggestions ({suggestionItems.length})</span>
+                    <span>Click unit to add or open product</span>
+                  </div>
+                  {suggestionItems.length === 0 ? (
+                    <div className="p-4 text-center text-xs text-slate-400">
+                      No matching products found for "{searchQuery}"
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                      {suggestionItems.map((prod) => {
+                        const pid = prod._id || prod.id;
+                        const isW = isWeightProduct(prod);
+                        return (
+                          <div
+                            key={pid}
+                            onMouseDown={() => {
+                              setShowSuggestions(false);
+                              handleProductClick({ ...prod, id: pid });
+                            }}
+                            className="p-3 hover:bg-slate-50 flex items-center justify-between gap-3 cursor-pointer transition-colors"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <img
+                                src={prod.image}
+                                alt={prod.name}
+                                className="w-11 h-11 rounded-xl object-cover bg-slate-100 border border-slate-200 shrink-0"
+                              />
+                              <div className="min-w-0">
+                                <p className="text-sm font-bold text-slate-900 truncate">{prod.name}</p>
+                                <p className="text-xs text-slate-500 capitalize">
+                                  {prod.category} • <span className="font-bold text-brand-600">₹{prod.price}</span> / {isW ? 'kg' : prod.unit}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1.5 shrink-0"
+                            >
+                              {isW ? (
+                                [
+                                  { label: '250g', g: 250 },
+                                  { label: '500g', g: 500 },
+                                  { label: '1kg', g: 1000 }
+                                ].map((opt) => (
+                                  <button
+                                    key={opt.label}
+                                    type="button"
+                                    onClick={() => {
+                                      addToCart({ ...prod, id: pid, _id: pid }, 1, opt.g);
+                                      setShowSuggestions(false);
+                                    }}
+                                    className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-800 border border-emerald-200 text-[10px] font-bold transition-colors cursor-pointer"
+                                    title={`Add ${opt.label} for ₹${calculateWeightPrice(prod.price, opt.g, 1)}`}
+                                  >
+                                    +{opt.label} (₹{calculateWeightPrice(prod.price, opt.g, 1)})
+                                  </button>
+                                ))
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    addToCart({ ...prod, id: pid, _id: pid }, 1);
+                                    setShowSuggestions(false);
+                                  }}
+                                  className="px-3 py-1.5 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-xs font-bold shadow-xs cursor-pointer"
+                                >
+                                  + Add (₹{prod.price})
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

@@ -36,6 +36,7 @@ export const ProductManagement = () => {
     name: '',
     category: 'grocery',
     unit: '1 kg',
+    isWeightBased: true,
     price: 50,
     costPrice: 38,
     originalPrice: 60,
@@ -88,10 +89,14 @@ export const ProductManagement = () => {
 
   const handleOpenEdit = (p) => {
     setEditingProductId(p._id || p.id);
+    const isWeight = p.isWeightBased !== undefined
+      ? Boolean(p.isWeightBased)
+      : ['kg', 'gram', 'g', 'gm', '1 kg', 'per kg'].includes((p.unit || '').toLowerCase().trim());
     setProductForm({
       name: p.name,
       category: p.category,
       unit: p.unit,
+      isWeightBased: isWeight,
       price: p.price,
       costPrice: p.costPrice !== undefined ? p.costPrice : Math.round((p.price || 0) * 0.75),
       originalPrice: p.originalPrice || p.price,
@@ -169,6 +174,78 @@ export const ProductManagement = () => {
     }
   };
 
+  const [showSearchSuggestions, setShowSearchSuggestions] = useState(false);
+  const [inlineEdits, setInlineEdits] = useState({});
+  const [savingInlineId, setSavingInlineId] = useState(null);
+
+  const handleInlineFieldChange = (product, field, value) => {
+    const pid = product._id || product.id;
+    setInlineEdits((prev) => {
+      const existing = prev[pid] || {
+        unit: product.unit || '1 kg',
+        price: product.price || 0
+      };
+      const updated = { ...existing, [field]: value };
+      // If unit is switched between Kg and 500g / 250g / Gram, optionally scale price if user hasn't manually typed price yet
+      if (field === 'unit') {
+        const oldUnit = (existing.unit || '').toLowerCase().trim();
+        const newUnit = (value || '').toLowerCase().trim();
+        const basePrice = Number(existing.price || product.price || 0);
+        if (['kg', '1 kg'].includes(oldUnit) && newUnit === '500g') {
+          updated.price = Math.round(basePrice * 0.5 * 100) / 100;
+        } else if (['kg', '1 kg'].includes(oldUnit) && newUnit === '250g') {
+          updated.price = Math.round(basePrice * 0.25 * 100) / 100;
+        } else if (oldUnit === '500g' && ['kg', '1 kg'].includes(newUnit)) {
+          updated.price = Math.round(basePrice * 2 * 100) / 100;
+        } else if (oldUnit === '250g' && ['kg', '1 kg'].includes(newUnit)) {
+          updated.price = Math.round(basePrice * 4 * 100) / 100;
+        }
+      }
+      return { ...prev, [pid]: updated };
+    });
+  };
+
+  const handleSaveInlineUnitAndPrice = async (product) => {
+    const pid = product._id || product.id;
+    const edit = inlineEdits[pid];
+    if (!edit) return;
+    const newUnit = (edit.unit || product.unit || '1 kg').trim();
+    const newPrice = Number(edit.price);
+    if (isNaN(newPrice) || newPrice <= 0) {
+      showToast('Please enter a valid positive price', 'error');
+      return;
+    }
+    const isWeight = ['kg', '1 kg', 'gram', 'g', 'gm', '500g', '250g', '100g'].includes(
+      newUnit.toLowerCase()
+    );
+    setSavingInlineId(pid);
+    try {
+      await productService.updateProduct(pid, {
+        ...product,
+        unit: newUnit,
+        price: newPrice,
+        isWeightBased: isWeight
+      });
+      setProducts((prev) =>
+        prev.map((p) =>
+          p._id === pid || p.id === pid
+            ? { ...p, unit: newUnit, price: newPrice, isWeightBased: isWeight }
+            : p
+        )
+      );
+      setInlineEdits((prev) => {
+        const copy = { ...prev };
+        delete copy[pid];
+        return copy;
+      });
+      showToast(`Updated "${product.name}" → ${newUnit} @ ₹${newPrice}`);
+    } catch (err) {
+      showToast(err.message || 'Failed to update unit & price', 'error');
+    } finally {
+      setSavingInlineId(null);
+    }
+  };
+
   const handleQuickStockAdjust = async (id, currentStock, delta) => {
     const newStock = Math.max(0, currentStock + delta);
     try {
@@ -187,10 +264,24 @@ export const ProductManagement = () => {
     }
   };
 
+  const searchSuggestions = products
+    .filter((p) => {
+      const q = productSearch.trim().toLowerCase();
+      if (!q) return false;
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.category.toLowerCase().includes(q) ||
+        (p.barcode && p.barcode.toString().toLowerCase().includes(q))
+      );
+    })
+    .slice(0, 6);
+
   const filteredProducts = products.filter((p) => {
+    const q = productSearch.toLowerCase();
     const matchesSearch =
-      p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
-      p.category.toLowerCase().includes(productSearch.toLowerCase());
+      p.name.toLowerCase().includes(q) ||
+      p.category.toLowerCase().includes(q) ||
+      (p.barcode && p.barcode.toString().toLowerCase().includes(q));
     const matchesCat = selectedCategory === 'all' || p.category.toLowerCase() === selectedCategory.toLowerCase();
     return matchesSearch && matchesCat;
   });
@@ -235,15 +326,82 @@ export const ProductManagement = () => {
         {/* Actions Bar */}
         <div className="bg-white p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 sm:gap-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 sm:gap-3 w-full md:w-auto flex-1">
-            <div className="relative w-full sm:w-72">
+            <div className="relative w-full sm:w-80">
               <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 value={productSearch}
-                onChange={(e) => setProductSearch(e.target.value)}
-                placeholder="Search products..."
-                className="w-full pl-9 pr-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                onFocus={() => setShowSearchSuggestions(true)}
+                onBlur={() => setTimeout(() => setShowSearchSuggestions(false), 180)}
+                onChange={(e) => {
+                  setProductSearch(e.target.value);
+                  setShowSearchSuggestions(true);
+                }}
+                placeholder="Search products by name, category, or barcode..."
+                className="w-full pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
               />
+              {productSearch && (
+                <button
+                  type="button"
+                  onClick={() => setProductSearch('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+
+              {/* Live Product Search Suggestion Dropdown */}
+              {showSearchSuggestions && productSearch.trim().length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-2xl border border-slate-200 shadow-2xl z-40 overflow-hidden">
+                  <div className="px-3 py-1.5 bg-slate-50 border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+                    <span>Product Suggestions ({searchSuggestions.length})</span>
+                    <span>Click to Filter or Edit</span>
+                  </div>
+                  {searchSuggestions.length === 0 ? (
+                    <div className="p-3 text-xs text-slate-400 text-center">
+                      No matching products found
+                    </div>
+                  ) : (
+                    <div className="divide-y divide-slate-100 max-h-64 overflow-y-auto">
+                      {searchSuggestions.map((item) => (
+                        <div
+                          key={item._id || item.id}
+                          onMouseDown={() => {
+                            setProductSearch(item.name);
+                            setShowSearchSuggestions(false);
+                          }}
+                          className="p-2.5 hover:bg-slate-50 flex items-center justify-between gap-2.5 cursor-pointer transition-colors"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <img
+                              src={item.image}
+                              alt={item.name}
+                              className="w-9 h-9 rounded-lg object-cover bg-slate-100 border border-slate-200 shrink-0"
+                            />
+                            <div className="min-w-0">
+                              <p className="text-xs font-bold text-slate-900 truncate">{item.name}</p>
+                              <p className="text-[10px] text-slate-500">
+                                {item.unit} • <span className="font-bold text-emerald-700">₹{item.price}</span> • Stock: {item.stockCount ?? 50}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onMouseDown={(e) => {
+                              e.stopPropagation();
+                              setShowSearchSuggestions(false);
+                              handleOpenEdit(item);
+                            }}
+                            className="px-2 py-1 rounded-lg bg-brand-50 hover:bg-brand-100 text-brand-700 font-bold text-[10px] shrink-0 cursor-pointer"
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             <select
@@ -282,12 +440,12 @@ export const ProductManagement = () => {
         {/* Products Table */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[750px]">
+            <table className="w-full text-left border-collapse min-w-[780px]">
               <thead>
                 <tr className="bg-slate-50/75 border-b border-slate-200/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">Product</th>
                   <th className="py-3 px-3">Category</th>
-                  <th className="py-3 px-3">Sell Price</th>
+                  <th className="py-3 px-3">Custom Unit &amp; Sell Price</th>
                   <th className="py-3 px-3">Purchase Cost</th>
                   <th className="py-3 px-3">Gross Profit</th>
                   <th className="py-3 px-4 text-center">Manage Stock</th>
@@ -307,9 +465,16 @@ export const ProductManagement = () => {
                     const pid = p._id || p.id;
                     const stock = p.stockCount !== undefined ? p.stockCount : 50;
                     const isLowStock = stock <= 10;
-                    const cost = p.costPrice !== undefined ? p.costPrice : Math.round((p.price || 0) * 0.75);
-                    const grossProfit = Math.max(0, (p.price || 0) - cost);
-                    const margin = p.price > 0 ? Math.round((grossProfit / p.price) * 100) : 0;
+                    const rowEdit = inlineEdits[pid];
+                    const currentUnitVal = rowEdit !== undefined ? rowEdit.unit : (p.unit || '1 kg');
+                    const currentPriceVal = rowEdit !== undefined ? rowEdit.price : (p.price || 0);
+                    const hasInlineChanges =
+                      rowEdit !== undefined &&
+                      (rowEdit.unit !== p.unit || Number(rowEdit.price) !== Number(p.price));
+
+                    const cost = p.costPrice !== undefined ? p.costPrice : Math.round((Number(currentPriceVal) || 0) * 0.75);
+                    const grossProfit = Math.max(0, (Number(currentPriceVal) || 0) - cost);
+                    const margin = Number(currentPriceVal) > 0 ? Math.round((grossProfit / Number(currentPriceVal)) * 100) : 0;
 
                     return (
                       <tr key={pid} className="hover:bg-slate-50/60 transition-colors">
@@ -323,7 +488,12 @@ export const ProductManagement = () => {
                             <div>
                               <p className="font-bold text-slate-900 text-sm">{p.name}</p>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[11px] text-slate-500">{p.unit}</span>
+                                <span className="text-[11px] text-slate-500">{currentUnitVal}</span>
+                                {(p.isWeightBased || ['kg', '1 kg', 'gram', 'g', 'gm', '500g', '250g'].includes((currentUnitVal || '').toLowerCase().trim())) && (
+                                  <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 inline-flex items-center gap-0.5">
+                                    ⚖️ Exact Weight
+                                  </span>
+                                )}
                                 {p.barcode && (
                                   <span className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-100 text-slate-600 rounded">
                                     {p.barcode}
@@ -340,11 +510,57 @@ export const ProductManagement = () => {
                           </span>
                         </td>
 
-                        <td className="py-3.5 px-3 font-bold text-slate-900 text-sm">
-                          ₹{p.price}
-                          {p.originalPrice > p.price && (
-                            <span className="line-through text-slate-400 text-xs block font-normal">
-                              ₹{p.originalPrice}
+                        {/* Simultaneous Custom Unit & Price Editor */}
+                        <td className="py-3 px-3">
+                          <div className="flex items-center gap-1.5">
+                            <div className="inline-flex items-center rounded-xl border border-slate-200 bg-slate-50 focus-within:bg-white focus-within:border-brand-500 p-0.5">
+                              <span className="pl-2 text-xs font-bold text-slate-400">₹</span>
+                              <input
+                                type="number"
+                                step="any"
+                                min="0.01"
+                                value={currentPriceVal}
+                                onChange={(e) => handleInlineFieldChange(p, 'price', e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') handleSaveInlineUnitAndPrice(p);
+                                }}
+                                className="w-16 py-1 px-1 text-xs font-black text-slate-900 bg-transparent focus:outline-none font-mono"
+                                title="Change product selling price"
+                              />
+                              <select
+                                value={currentUnitVal}
+                                onChange={(e) => handleInlineFieldChange(p, 'unit', e.target.value)}
+                                className="py-1 px-1.5 text-[11px] font-bold text-emerald-800 bg-emerald-50 border-l border-slate-200 rounded-lg focus:outline-none cursor-pointer"
+                                title="Change product unit simultaneously"
+                              >
+                                {!['Kg', '1 kg', '500g', '250g', 'Gram', 'Piece', 'Litre', 'Pack', 'Box'].includes(
+                                  currentUnitVal
+                                ) && <option value={currentUnitVal}>{currentUnitVal}</option>}
+                                <option value="Kg">/ Kg</option>
+                                <option value="500g">/ 500g</option>
+                                <option value="250g">/ 250g</option>
+                                <option value="Gram">/ Gram</option>
+                                <option value="Piece">/ Piece</option>
+                                <option value="Litre">/ Litre</option>
+                                <option value="Pack">/ Pack</option>
+                                <option value="Box">/ Box</option>
+                              </select>
+                            </div>
+                            {hasInlineChanges && (
+                              <button
+                                type="button"
+                                disabled={savingInlineId === pid}
+                                onClick={() => handleSaveInlineUnitAndPrice(p)}
+                                className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] shadow-xs cursor-pointer shrink-0"
+                                title="Save custom unit & price"
+                              >
+                                {savingInlineId === pid ? '...' : 'Save'}
+                              </button>
+                            )}
+                          </div>
+                          {p.originalPrice > currentPriceVal && (
+                            <span className="line-through text-slate-400 text-[10px] block font-normal mt-0.5">
+                              MRP ₹{p.originalPrice}
                             </span>
                           )}
                         </td>
@@ -355,7 +571,7 @@ export const ProductManagement = () => {
 
                         <td className="py-3.5 px-3">
                           <span className="font-bold text-emerald-700 text-xs block">
-                            +₹{grossProfit}
+                            +₹{Math.round(grossProfit * 100) / 100}
                           </span>
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700">
                             {margin}% margin
@@ -476,20 +692,23 @@ export const ProductManagement = () => {
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-slate-700">Unit / Measure *</label>
                     <div className="flex items-center gap-1">
-                      {['Kg', 'Piece', 'Gram', 'Litre', 'Pack', 'Box'].map((u) => (
-                        <button
-                          key={u}
-                          type="button"
-                          onClick={() => setProductForm({ ...productForm, unit: u })}
-                          className={`text-[9px] px-1 py-0.5 rounded font-bold transition-colors cursor-pointer ${
-                            productForm.unit?.toLowerCase() === u.toLowerCase()
-                              ? 'bg-emerald-600 text-white'
-                              : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
-                          }`}
-                        >
-                          {u}
-                        </button>
-                      ))}
+                      {['Kg', 'Piece', 'Gram', 'Litre', 'Pack', 'Box'].map((u) => {
+                        const isW = ['kg', 'gram'].includes(u.toLowerCase());
+                        return (
+                          <button
+                            key={u}
+                            type="button"
+                            onClick={() => setProductForm({ ...productForm, unit: u, isWeightBased: isW })}
+                            className={`text-[9px] px-1 py-0.5 rounded font-bold transition-colors cursor-pointer ${
+                              productForm.unit?.toLowerCase() === u.toLowerCase()
+                                ? 'bg-emerald-600 text-white'
+                                : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {u}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                   <input
@@ -497,7 +716,11 @@ export const ProductManagement = () => {
                     required
                     list="unit-options"
                     value={productForm.unit}
-                    onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      const isW = ['kg', 'gram', 'g', 'gm'].includes(val.toLowerCase().trim());
+                      setProductForm({ ...productForm, unit: val, isWeightBased: isW ? true : productForm.isWeightBased });
+                    }}
                     className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm focus:outline-none"
                     placeholder="e.g. Kg, Piece, Gram, Litre, Pack, Box"
                   />
@@ -510,6 +733,54 @@ export const ProductManagement = () => {
                     <option value="Box" />
                   </datalist>
                 </div>
+              </div>
+
+              {/* Exact Weight vs Count Pricing Selector */}
+              <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <label className="block text-xs font-bold text-slate-800">
+                  Measurement &amp; Billing Mode
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProductForm((prev) => ({
+                        ...prev,
+                        isWeightBased: true,
+                        unit: prev.unit?.toLowerCase() === 'piece' ? 'Kg' : prev.unit
+                      }))
+                    }
+                    className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                      productForm.isWeightBased
+                        ? 'bg-emerald-600 text-white border-emerald-700 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>⚖️ Weight Based (Kg / g)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setProductForm((prev) => ({
+                        ...prev,
+                        isWeightBased: false,
+                        unit: prev.unit?.toLowerCase() === 'kg' ? 'Piece' : prev.unit
+                      }))
+                    }
+                    className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 border transition-all cursor-pointer ${
+                      !productForm.isWeightBased
+                        ? 'bg-slate-900 text-white border-slate-950 shadow-xs'
+                        : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>📦 Count Based (Pieces)</span>
+                  </button>
+                </div>
+                <p className="text-[11px] text-slate-500">
+                  {productForm.isWeightBased
+                    ? 'Customers & POS can enter exact arbitrary measured weights (e.g. 3.073 kg, 127 g). Inventory will be decremented by exact fractional kg.'
+                    : 'Standard discrete product sold by integer count (e.g. 1 piece, 2 packs).'}
+                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

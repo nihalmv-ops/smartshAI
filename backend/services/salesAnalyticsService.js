@@ -531,25 +531,60 @@ export const salesAnalyticsService = {
           name: { $first: '$orderItems.name' },
           image: { $first: '$orderItems.image' },
           category: { $first: '$orderItems.category' },
-          unitsSold: { $sum: '$orderItems.qty' },
-          revenue: { $sum: { $multiply: ['$orderItems.price', '$orderItems.qty'] } },
-          totalCost: { $sum: { $multiply: ['$orderItems.costPrice', '$orderItems.qty'] } }
+          unit: { $first: '$orderItems.unit' },
+          isWeightBased: { $first: '$orderItems.isWeightBased' },
+          unitsSold: {
+            $sum: {
+              $cond: [
+                { $gt: ['$orderItems.weightInGrams', 0] },
+                { $multiply: [{ $divide: ['$orderItems.weightInGrams', 1000] }, { $ifNull: ['$orderItems.quantity', '$orderItems.qty'] }] },
+                '$orderItems.qty'
+              ]
+            }
+          },
+          revenue: {
+            $sum: {
+              $cond: [
+                { $gt: ['$orderItems.itemTotal', 0] },
+                '$orderItems.itemTotal',
+                { $multiply: ['$orderItems.price', '$orderItems.qty'] }
+              ]
+            }
+          },
+          totalCost: {
+            $sum: {
+              $cond: [
+                { $gt: ['$orderItems.weightInGrams', 0] },
+                {
+                  $multiply: [
+                    { $divide: [{ $ifNull: ['$orderItems.costPrice', 0] }, 1000] },
+                    '$orderItems.weightInGrams',
+                    { $ifNull: ['$orderItems.quantity', '$orderItems.qty'] }
+                  ]
+                },
+                { $multiply: ['$orderItems.costPrice', '$orderItems.qty'] }
+              ]
+            }
+          }
         }
       }
     ]);
 
     const productsFormatted = rawItems.map((item) => {
-      const rev = Math.round(item.revenue || 0);
-      const cost = Math.round(item.totalCost || 0);
-      const grossProfit = Math.max(0, rev - cost);
+      const rev = Math.round((item.revenue || 0) * 100) / 100;
+      const cost = Math.round((item.totalCost || 0) * 100) / 100;
+      const grossProfit = Math.max(0, Math.round((rev - cost) * 100) / 100);
       const margin = rev > 0 ? Math.round((grossProfit / rev) * 1000) / 10 : 0;
+      const cleanUnits = Math.round(Number(item.unitsSold || 0) * 1000) / 1000;
 
       return {
         id: item._id,
         name: item.name,
         image: item.image,
         category: item.category || 'grocery',
-        unitsSold: item.unitsSold,
+        unit: item.unit || (item.isWeightBased ? 'kg' : 'piece'),
+        isWeightBased: item.isWeightBased,
+        unitsSold: cleanUnits,
         revenue: rev,
         cost,
         grossProfit,
@@ -578,19 +613,50 @@ export const salesAnalyticsService = {
       {
         $group: {
           _id: { $toLower: { $ifNull: ['$orderItems.category', 'grocery'] } },
-          revenue: { $sum: { $multiply: ['$orderItems.price', '$orderItems.qty'] } },
-          totalCost: { $sum: { $multiply: ['$orderItems.costPrice', '$orderItems.qty'] } },
-          unitsSold: { $sum: '$orderItems.qty' }
+          revenue: {
+            $sum: {
+              $cond: [
+                { $gt: ['$orderItems.itemTotal', 0] },
+                '$orderItems.itemTotal',
+                { $multiply: ['$orderItems.price', '$orderItems.qty'] }
+              ]
+            }
+          },
+          totalCost: {
+            $sum: {
+              $cond: [
+                { $gt: ['$orderItems.weightInGrams', 0] },
+                {
+                  $multiply: [
+                    { $divide: [{ $ifNull: ['$orderItems.costPrice', 0] }, 1000] },
+                    '$orderItems.weightInGrams',
+                    { $ifNull: ['$orderItems.quantity', '$orderItems.qty'] }
+                  ]
+                },
+                { $multiply: ['$orderItems.costPrice', '$orderItems.qty'] }
+              ]
+            }
+          },
+          unitsSold: {
+            $sum: {
+              $cond: [
+                { $gt: ['$orderItems.weightInGrams', 0] },
+                { $multiply: [{ $divide: ['$orderItems.weightInGrams', 1000] }, { $ifNull: ['$orderItems.quantity', '$orderItems.qty'] }] },
+                '$orderItems.qty'
+              ]
+            }
+          }
         }
       },
       { $sort: { revenue: -1 } }
     ]);
 
     return rawCategories.map((c) => {
-      const rev = Math.round(c.revenue || 0);
-      const cost = Math.round(c.totalCost || 0);
-      const grossProfit = Math.max(0, rev - cost);
+      const rev = Math.round((c.revenue || 0) * 100) / 100;
+      const cost = Math.round((c.totalCost || 0) * 100) / 100;
+      const grossProfit = Math.max(0, Math.round((rev - cost) * 100) / 100);
       const margin = rev > 0 ? Math.round((grossProfit / rev) * 1000) / 10 : 0;
+      const cleanUnits = Math.round(Number(c.unitsSold || 0) * 1000) / 1000;
 
       return {
         category: c._id || 'other',
@@ -598,7 +664,7 @@ export const salesAnalyticsService = {
         cost,
         grossProfit,
         profitMargin: margin,
-        unitsSold: c.unitsSold
+        unitsSold: cleanUnits
       };
     });
   },

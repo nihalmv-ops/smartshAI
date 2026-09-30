@@ -12,12 +12,21 @@ import {
   Check, 
   ChevronRight,
   ArrowLeft,
-  Share2
+  Share2,
+  Scale
 } from 'lucide-react';
 import { productService } from '../services/productService';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { ProductCard } from '../components/common/ProductCard';
+import {
+  isWeightProduct,
+  isVolumeProduct,
+  calculateWeightPrice,
+  formatWeight,
+  gramsToKg,
+  kgToGrams
+} from '../utils/weightUtils';
 
 export const ProductDetails = ({ productId: propProductId, navigateTo: propNavigateTo, onSelectProduct }) => {
   const { id: paramId } = useParams();
@@ -30,6 +39,11 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
   const [quantity, setQuantity] = useState(1);
   const [selectedPack, setSelectedPack] = useState('1 Pack');
   const [activeTab, setActiveTab] = useState('description');
+
+  // Exact Custom Weight / Volume Measurement State
+  const [selectedUnit, setSelectedUnit] = useState('kg');
+  const [weightInput, setWeightInput] = useState('1');
+  const [activePreset, setActivePreset] = useState('1 kg');
 
   const { addToCart, updateQuantity, cart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
@@ -44,6 +58,17 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
           setProduct(prod);
           setSelectedPack(prod.unit || '1 Pack');
           setQuantity(1);
+
+          if (isWeightProduct(prod)) {
+            setSelectedUnit('kg');
+            setWeightInput('1');
+            setActivePreset('1 kg');
+          } else if (isVolumeProduct(prod)) {
+            setSelectedUnit('L');
+            setWeightInput('1');
+            setActivePreset('1 L');
+          }
+
           const all = await productService.getAllProducts();
           const rel = productService.getRelatedProducts(prod.id || prod._id, prod.category, all.products, 4);
           setRelatedProducts(rel);
@@ -103,6 +128,77 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
       </div>
     );
   }
+
+  const isWeight = product ? isWeightProduct(product) : false;
+  const isVolume = product ? isVolumeProduct(product) : false;
+  const isMeasurable = isWeight || isVolume;
+
+  // Compute canonical weight in grams (or millilitres for liquid)
+  let weightInGrams = 0;
+  if (isMeasurable) {
+    const rawVal = parseFloat(weightInput);
+    if (!isNaN(rawVal) && rawVal > 0) {
+      if (selectedUnit === 'kg' || selectedUnit === 'L') {
+        weightInGrams = Math.round(rawVal * 1000);
+      } else {
+        weightInGrams = Math.round(rawVal);
+      }
+    }
+  }
+
+  // Live dynamic price calculations
+  const itemLineTotal = isMeasurable
+    ? calculateWeightPrice(product.price, weightInGrams, quantity)
+    : Math.round(product.price * quantity * 100) / 100;
+
+  const itemOriginalLineTotal = isMeasurable && product.originalPrice
+    ? calculateWeightPrice(product.originalPrice, weightInGrams, quantity)
+    : Math.round((product.originalPrice || product.price) * quantity * 100) / 100;
+
+  const handleUnitChange = (newUnit) => {
+    const currentVal = parseFloat(weightInput);
+    if (!isNaN(currentVal) && currentVal > 0) {
+      if (selectedUnit === 'kg' && newUnit === 'g') {
+        setWeightInput(Math.round(currentVal * 1000).toString());
+      } else if (selectedUnit === 'g' && newUnit === 'kg') {
+        setWeightInput((Math.round((currentVal / 1000) * 1000) / 1000).toString());
+      } else if (selectedUnit === 'L' && newUnit === 'ml') {
+        setWeightInput(Math.round(currentVal * 1000).toString());
+      } else if (selectedUnit === 'ml' && newUnit === 'L') {
+        setWeightInput((Math.round((currentVal / 1000) * 1000) / 1000).toString());
+      }
+    }
+    setSelectedUnit(newUnit);
+  };
+
+  const weightPresets = [
+    { label: '100 g', unit: 'g', val: '100' },
+    { label: '250 g', unit: 'g', val: '250' },
+    { label: '500 g', unit: 'g', val: '500' },
+    { label: '750 g', unit: 'g', val: '750' },
+    { label: '1 kg', unit: 'kg', val: '1' }
+  ];
+
+  const volumePresets = [
+    { label: '250 ml', unit: 'ml', val: '250' },
+    { label: '500 ml', unit: 'ml', val: '500' },
+    { label: '1 L', unit: 'L', val: '1' },
+    { label: '1.5 L', unit: 'L', val: '1.5' },
+    { label: '2 L', unit: 'L', val: '2' }
+  ];
+
+  const activePresetsList = isVolume ? volumePresets : weightPresets;
+
+  const handleSelectPreset = (p) => {
+    setSelectedUnit(p.unit);
+    setWeightInput(p.val);
+    setActivePreset(p.label);
+  };
+
+  const handleWeightInputChange = (e) => {
+    setWeightInput(e.target.value);
+    setActivePreset('Custom Weight');
+  };
 
   const isFav = isInWishlist(product.id || product._id);
   const cartItem = cart.find(i => (i.id === product.id || i._id === (product._id || product.id)));
@@ -212,20 +308,23 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
                 </div>
               </div>
 
-              {/* Price Display */}
+              {/* Base Price Display */}
               <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                 <div>
                   <div className="flex items-baseline gap-2">
                     <span className="text-3xl font-black text-slate-900 tracking-tight">
                       ₹{product.price}
                     </span>
+                    <span className="text-xs font-bold text-slate-500">
+                      / {isWeight ? 'kg' : isVolume ? 'litre' : product.unit}
+                    </span>
                     {product.originalPrice && product.originalPrice > product.price && (
-                      <span className="text-base text-slate-400 line-through">
+                      <span className="text-base text-slate-400 line-through ml-1">
                         ₹{product.originalPrice}
                       </span>
                     )}
                   </div>
-                  <p className="text-xs text-slate-500 mt-0.5">Inclusive of all local taxes</p>
+                  <p className="text-xs text-slate-500 mt-0.5">Price measured precisely by certified scales</p>
                 </div>
 
                 {product.originalPrice && (
@@ -235,32 +334,177 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
                 )}
               </div>
 
-              {/* Pack Size Selection */}
-              <div className="space-y-2">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Pack Size</label>
-                <div className="flex flex-wrap gap-3">
-                  {packOptions.map((pack) => (
-                    <button
-                      key={pack}
-                      onClick={() => setSelectedPack(pack)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
-                        selectedPack === pack
-                          ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-500/20'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-700'
-                      }`}
-                    >
-                      {pack}
-                    </button>
-                  ))}
+              {/* Exact Weight Selection (For Weight/Volume Based Products) */}
+              {isMeasurable ? (
+                <div className="p-4 sm:p-5 rounded-2xl border border-brand-200 bg-brand-50/30 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-black uppercase tracking-wider text-brand-900 flex items-center gap-1.5">
+                      <Scale className="w-4 h-4 text-brand-600" />
+                      <span>Exact Measured Weight</span>
+                    </label>
+                    <span className="text-[11px] font-semibold text-slate-500">
+                      Scale-certified accuracy
+                    </span>
+                  </div>
+
+                  {/* Quick Weight Options */}
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-600 block mb-1.5">Quick Select:</span>
+                    <div className="flex flex-wrap gap-2">
+                      {activePresetsList.map((preset) => (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => handleSelectPreset(preset)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                            activePreset === preset.label
+                              ? 'bg-brand-500 text-white border-brand-500 shadow-xs'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-brand-300'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                      <button
+                        type="button"
+                        onClick={() => setActivePreset('Custom Weight')}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          activePreset === 'Custom Weight'
+                            ? 'bg-brand-500 text-white border-brand-500 shadow-xs'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-brand-300'
+                        }`}
+                      >
+                        Custom Weight
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Exact Weight Input with Unit Selector */}
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-600 block">
+                      Enter Exact Measured Weight (Any arbitrary scale reading):
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <div className="relative flex-1">
+                        <input
+                          type="number"
+                          step="any"
+                          min="0.001"
+                          value={weightInput}
+                          onChange={handleWeightInputChange}
+                          placeholder={selectedUnit === 'kg' ? 'e.g. 3.073' : 'e.g. 127'}
+                          className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-black text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                        />
+                      </div>
+
+                      {/* Unit Selector Toggle */}
+                      <div className="flex bg-white rounded-xl border border-slate-300 p-1">
+                        {isVolume ? (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleUnitChange('L')}
+                              className={`px-3 py-1 text-xs font-black rounded-lg transition-colors cursor-pointer ${
+                                selectedUnit === 'L'
+                                  ? 'bg-brand-500 text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              L
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUnitChange('ml')}
+                              className={`px-3 py-1 text-xs font-black rounded-lg transition-colors cursor-pointer ${
+                                selectedUnit === 'ml'
+                                  ? 'bg-brand-500 text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              ml
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleUnitChange('kg')}
+                              className={`px-3 py-1 text-xs font-black rounded-lg transition-colors cursor-pointer ${
+                                selectedUnit === 'kg'
+                                  ? 'bg-brand-500 text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              kg
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleUnitChange('g')}
+                              className={`px-3 py-1 text-xs font-black rounded-lg transition-colors cursor-pointer ${
+                                selectedUnit === 'g'
+                                  ? 'bg-brand-500 text-white'
+                                  : 'text-slate-600 hover:text-slate-900'
+                              }`}
+                            >
+                              g
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Dynamic Calculation Breakdown */}
+                  <div className="p-3 bg-white rounded-xl border border-brand-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
+                    <div>
+                      <span className="font-bold text-slate-800">
+                        {formatWeight(weightInGrams)}
+                        {quantity > 1 ? ` × ${quantity} = ${formatWeight(weightInGrams * quantity)}` : ''}
+                      </span>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        {selectedUnit === 'g'
+                          ? `${weightInGrams} g = ${Math.round((weightInGrams / 1000) * 1000) / 1000} kg • ₹${product.price} × ${Math.round((weightInGrams / 1000) * 1000) / 1000}`
+                          : `₹${product.price} / kg × ${(parseFloat(weightInput) || 0)} kg`}
+                      </p>
+                    </div>
+
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 block uppercase font-bold">Item Total</span>
+                      <span className="text-base font-black text-brand-600">
+                        ₹{itemLineTotal}
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                /* Standard Pack Selection for piece products */
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">Select Pack Size</label>
+                  <div className="flex flex-wrap gap-3">
+                    {packOptions.map((pack) => (
+                      <button
+                        key={pack}
+                        onClick={() => setSelectedPack(pack)}
+                        className={`px-4 py-2 rounded-xl text-xs font-bold border transition-all ${
+                          selectedPack === pack
+                            ? 'border-brand-500 bg-brand-50 text-brand-700 ring-2 ring-brand-500/20'
+                            : 'border-slate-200 hover:border-slate-300 text-slate-700'
+                        }`}
+                      >
+                        {pack}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Quantity Stepper & Add to Cart */}
               <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 pt-2">
                 <div className="flex items-center justify-between sm:justify-center border border-slate-200 rounded-2xl p-1 bg-slate-50">
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 shadow-xs transition-colors"
+                    className="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 shadow-xs transition-colors cursor-pointer"
+                    title="Decrease quantity"
                   >
                     <Minus className="w-4 h-4" />
                   </button>
@@ -269,19 +513,22 @@ export const ProductDetails = ({ productId: propProductId, navigateTo: propNavig
                   </span>
                   <button
                     onClick={() => setQuantity(quantity + 1)}
-                    className="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 shadow-xs transition-colors"
+                    className="w-10 h-10 rounded-xl bg-white hover:bg-slate-100 flex items-center justify-center text-slate-700 shadow-xs transition-colors cursor-pointer"
+                    title="Increase quantity"
                   >
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
 
                 <button
-                  onClick={() => addToCart(product, quantity)}
-                  disabled={!product.inStock}
-                  className="flex-1 py-3.5 px-6 rounded-2xl bg-brand-500 hover:bg-brand-600 active:scale-98 disabled:bg-slate-200 text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-brand-500/25 transition-all"
+                  onClick={() => addToCart(product, quantity, isMeasurable ? weightInGrams : null)}
+                  disabled={!product.inStock || (isMeasurable && weightInGrams <= 0)}
+                  className="flex-1 py-3.5 px-6 rounded-2xl bg-brand-500 hover:bg-brand-600 active:scale-98 disabled:bg-slate-200 disabled:cursor-not-allowed text-white font-bold text-sm flex items-center justify-center gap-2.5 shadow-lg shadow-brand-500/25 transition-all cursor-pointer"
                 >
                   <ShoppingCart className="w-5 h-5" />
-                  <span>Add {quantity > 1 ? `${quantity} Items` : 'to Cart'} • ₹{product.price * quantity}</span>
+                  <span>
+                    Add to Cart • ₹{itemLineTotal}
+                  </span>
                 </button>
               </div>
 

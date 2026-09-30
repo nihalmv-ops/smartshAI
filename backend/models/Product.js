@@ -90,6 +90,10 @@ const productSchema = new mongoose.Schema(
     lowStockThreshold: {
       type: Number,
       default: 10
+    },
+    isWeightBased: {
+      type: Boolean,
+      default: false
     }
   },
   {
@@ -97,10 +101,16 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Pre-save hook: ensure costPrice is populated if 0 or missing
+// Pre-save hook: ensure costPrice and isWeightBased are properly set
 productSchema.pre('save', function (next) {
   if (!this.costPrice || this.costPrice <= 0) {
     this.costPrice = Math.round((this.price || 0) * 0.75);
+  }
+  if (this.isWeightBased === undefined || this.isWeightBased === null) {
+    const u = (this.unit || '').toLowerCase().trim();
+    if (['kg', 'gram', 'grams', 'g', 'gm', 'kilogram', 'kgs'].some((k) => u === k || u.includes('kg') || u.includes('gram') || u.includes('/kg'))) {
+      this.isWeightBased = true;
+    }
   }
   next();
 });

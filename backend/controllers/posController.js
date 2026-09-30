@@ -1,6 +1,7 @@
 import Order from '../models/Order.js';
 import Product from '../models/Product.js';
 import DailyRegister from '../models/DailyRegister.js';
+import { isWeightProduct } from '../utils/weightUtils.js';
 
 // @desc    Create new offline Point-of-Sale (POS) counter transaction
 // @route   POST /api/pos/sale
@@ -57,13 +58,13 @@ export const createOfflineSale = async (req, res, next) => {
       const name = dbProduct.name;
       const unit = item.unit || dbProduct.unit || 'piece';
       const category = item.category || dbProduct.category || 'grocery';
+      const isWeight = dbProduct.isWeightBased || isWeightProduct(dbProduct) || isWeightProduct(unit);
+
       const rawQty = Number(item.qty !== undefined ? item.qty : (item.quantity !== undefined ? item.quantity : 1));
       if (isNaN(rawQty) || rawQty <= 0) {
         res.status(400);
         throw new Error(`Invalid quantity/weight for product "${name}": must be a valid positive number`);
       }
-      // Sensible supermarket decimal precision (up to 3 decimal places for weights e.g. 1.5 kg, 0.25 kg)
-      const qty = Math.round(rawQty * 1000) / 1000;
 
       // Check for requested custom billing price
       let actualBillingPrice = catalogPrice;
@@ -90,8 +91,33 @@ export const createOfflineSale = async (req, res, next) => {
         }
       }
 
-      const itemTotal = Math.round(actualBillingPrice * qty * 100) / 100;
-      const itemCostTotal = Math.round(costPrice * qty * 100) / 100;
+      let weightInGrams = Number(item.weightInGrams || 0);
+      if (isWeight && weightInGrams <= 0) {
+        // If cashier entered e.g. 3.073 kg or 127g
+        const u = (unit || '').toLowerCase().trim();
+        if (u === 'gram' || u === 'g' || u === 'gm' || u === 'gms') {
+          weightInGrams = Math.round(rawQty);
+        } else {
+          weightInGrams = Math.round(rawQty * 1000);
+        }
+      }
+
+      let itemTotal = 0;
+      let itemCostTotal = 0;
+      let effectiveQty = Math.round(rawQty * 1000) / 1000;
+
+      if (isWeight && weightInGrams > 0) {
+        // Price per gram based on billing price (which is per kg)
+        const pricePerGram = actualBillingPrice / 1000;
+        const costPerGram = costPrice / 1000;
+        const portion = Math.max(1, Number(item.portion || item.portionCount || 1));
+        itemTotal = Math.round(pricePerGram * weightInGrams * portion * 100) / 100;
+        itemCostTotal = Math.round(costPerGram * weightInGrams * portion * 100) / 100;
+        effectiveQty = Math.round((weightInGrams / 1000) * 1000) / 1000;
+      } else {
+        itemTotal = Math.round(actualBillingPrice * effectiveQty * 100) / 100;
+        itemCostTotal = Math.round(costPrice * effectiveQty * 100) / 100;
+      }
 
       calculatedItemsPrice += itemTotal;
       calculatedTotalCost += itemCostTotal;
@@ -104,8 +130,9 @@ export const createOfflineSale = async (req, res, next) => {
           originalPrice: catalogPrice,
           chargedPrice: actualBillingPrice,
           differencePerUnit: Math.round((actualBillingPrice - catalogPrice) * 100) / 100,
-          qty,
-          quantity: qty,
+          qty: effectiveQty,
+          quantity: effectiveQty,
+          weightInGrams: isWeight ? weightInGrams : 0,
           changedBy: req.user._id,
           changedByName: req.user.name || 'Admin',
           date: new Date(),
@@ -127,11 +154,16 @@ export const createOfflineSale = async (req, res, next) => {
         isPriceOverridden: isOverridden,
         category,
         unit,
-        qty,
-        quantity: qty,
+        weightInGrams: isWeight ? weightInGrams : 0,
+        isWeightBased: isWeight,
+        qty: effectiveQty,
+        quantity: effectiveQty,
         image: dbProduct.image || ''
       };
     });
+
+    calculatedItemsPrice = Math.round(calculatedItemsPrice * 100) / 100;
+    calculatedTotalCost = Math.round(calculatedTotalCost * 100) / 100;
 
     const safeDiscount = Math.max(0, Math.min(Number(discount) || 0, calculatedItemsPrice));
     const safeTax = Math.max(0, Number(tax) || 0);
@@ -179,10 +211,7 @@ export const createOfflineSale = async (req, res, next) => {
           { new: true }
         );
         if (updated) {
-          const cleanStock = Math.round(updated.stockCount * 1000) / 1000;
-          if (Math.abs(updated.stockCount - cleanStock) > 0.0001) {
-            updated.stockCount = cleanStock;
-          }
+          updated.stockCount = Math.round(updated.stockCount * 1000) / 1000;
           if (updated.stockCount <= 0) {
             updated.inStock = false;
           }

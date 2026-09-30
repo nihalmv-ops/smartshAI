@@ -50,7 +50,10 @@ export function App() {
   };
 
   const handleSelectProduct = (product) => {
-    navigate(`/products/${product.id}`);
+    const pid = product?._id || product?.id;
+    if (pid) {
+      navigate(`/products/${pid}`);
+    }
   };
 
   // Determine activePage for navbar highlight

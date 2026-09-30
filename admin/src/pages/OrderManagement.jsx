@@ -676,6 +676,19 @@ export const OrderManagement = () => {
                 <div className="space-y-2">
                   {selectedOrder.orderItems?.map((item, idx) => {
                     const qty = item.qty || item.quantity || 1;
+                    const isWeight = Boolean(item.isWeightBased || item.weightInGrams > 0);
+                    const weightGrams = item.weightInGrams || (isWeight ? Math.round(qty * 1000) : 0);
+                    const weightText = isWeight && weightGrams > 0
+                      ? (weightGrams >= 1000
+                          ? `${(weightGrams / 1000).toFixed(3).replace(/\.?0+$/, '')} kg`
+                          : `${weightGrams} g`)
+                      : null;
+                    const lineTotal = item.itemTotal !== undefined
+                      ? item.itemTotal
+                      : (isWeight && weightGrams > 0
+                          ? Math.round((item.price / 1000) * weightGrams * qty * 100) / 100
+                          : Math.round(item.price * qty * 100) / 100);
+
                     return (
                       <div
                         key={idx}
@@ -691,13 +704,24 @@ export const OrderManagement = () => {
                           )}
                           <div>
                             <p className="font-bold text-slate-900">{item.name}</p>
-                            <p className="text-[11px] text-slate-500">
-                              Qty: {qty} {item.unit ? `(${item.unit})` : ''}
-                            </p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                              {isWeight && weightText ? (
+                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  ⚖️ {weightText} {qty > 1 ? `× ${qty}` : ''}
+                                </span>
+                              ) : (
+                                <span className="text-[11px] text-slate-500">
+                                  Qty: {qty} {item.unit ? `(${item.unit})` : ''}
+                                </span>
+                              )}
+                              <span className="text-[10px] text-slate-400">
+                                @ ₹{item.price}{isWeight ? '/kg' : ''}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        <span className="font-bold text-slate-900">
-                          ₹{(item.price * qty).toLocaleString()}
+                        <span className="font-bold text-slate-900 font-mono">
+                          ₹{Number(lineTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                         </span>
                       </div>
                     );

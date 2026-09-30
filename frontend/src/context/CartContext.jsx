@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useRef } from 'r
 import { cartService } from '../services/cartService';
 import { settingsService, defaultSettings } from '../services/settingsService';
 import { useAuth } from './AuthContext';
+import { isWeightProduct, calculateWeightPrice, formatWeight } from '../utils/weightUtils';
 
 const CartContext = createContext();
 
@@ -20,6 +21,8 @@ export const CartProvider = ({ children }) => {
           price: 35,
           originalPrice: 40,
           quantity: 2,
+          weightInGrams: 0,
+          isWeightBased: false,
           image: 'https://images.unsplash.com/photo-1550583724-b2692b85b150?auto=format&fit=crop&w=600&q=80'
         },
         {
@@ -30,6 +33,8 @@ export const CartProvider = ({ children }) => {
           price: 40,
           originalPrice: 50,
           quantity: 1,
+          weightInGrams: 1000,
+          isWeightBased: true,
           image: 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?auto=format&fit=crop&w=600&q=80'
         }
       ];
@@ -87,6 +92,8 @@ export const CartProvider = ({ children }) => {
                 price: item.product.price,
                 originalPrice: item.product.originalPrice || item.product.price,
                 quantity: item.quantity,
+                weightInGrams: item.weightInGrams !== undefined ? item.weightInGrams : (isWeightProduct(item.product) ? 1000 : 0),
+                isWeightBased: isWeightProduct(item.product),
                 image: item.product.image
               }));
 
@@ -97,6 +104,9 @@ export const CartProvider = ({ children }) => {
                 const idx = combined.findIndex(c => (c.id === bItem.id || c._id === bItem.id));
                 if (idx > -1) {
                   combined[idx].quantity = Math.max(combined[idx].quantity, bItem.quantity);
+                  if (bItem.weightInGrams && !combined[idx].weightInGrams) {
+                    combined[idx].weightInGrams = bItem.weightInGrams;
+                  }
                 } else {
                   combined.push(bItem);
                 }
@@ -141,26 +151,61 @@ export const CartProvider = ({ children }) => {
     }, 3000);
   };
 
-  // Add products to cart
-  const addToCart = (product, quantity = 1) => {
+  // Add products to cart (with exact weight support)
+  const addToCart = (product, quantity = 1, customWeightInGrams = null) => {
     const prodId = product._id || product.id;
+    const isWeight = isWeightProduct(product);
+    
+    // Determine canonical weight in grams
+    let finalWeight = 0;
+    if (customWeightInGrams !== null && customWeightInGrams !== undefined) {
+      finalWeight = Number(customWeightInGrams) || 0;
+    } else if (product.weightInGrams) {
+      finalWeight = Number(product.weightInGrams);
+    } else if (isWeight) {
+      finalWeight = 1000; // Default: 1 kg (1000g)
+    }
+
     setCart(prev => {
-      const existing = prev.find(item => (item.id === prodId || item._id === prodId));
-      if (existing) {
-        return prev.map(item =>
-          (item.id === prodId || item._id === prodId)
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
+      const existingIndex = prev.findIndex(item => (item.id === prodId || item._id === prodId));
+      if (existingIndex > -1) {
+        return prev.map((item, idx) => {
+          if (idx === existingIndex) {
+            // If custom weight was specified during add, update the weight and add quantity
+            return {
+              ...item,
+              quantity: item.quantity + quantity,
+              weightInGrams: finalWeight > 0 ? finalWeight : item.weightInGrams
+            };
+          }
+          return item;
+        });
       }
+
       return [...prev, { 
         ...product, 
         id: prodId,
         _id: prodId,
-        quantity 
+        quantity,
+        weightInGrams: finalWeight,
+        isWeightBased: isWeight
       }];
     });
-    showToast(`Added ${quantity > 1 ? quantity + 'x ' : ''}${product.name} to cart!`);
+
+    const weightInfo = isWeight && finalWeight > 0 ? ` (${formatWeight(finalWeight)})` : '';
+    showToast(`Added ${quantity > 1 ? quantity + 'x ' : ''}${product.name}${weightInfo} to cart!`);
+  };
+
+  // Update exact weight of an item directly in cart
+  const updateItemWeight = (productId, newWeightInGrams) => {
+    const cleanWeight = Math.max(1, Math.round(Number(newWeightInGrams) || 1));
+    setCart(prev =>
+      prev.map(item =>
+        (item.id === productId || item._id === productId)
+          ? { ...item, weightInGrams: cleanWeight }
+          : item
+      )
+    );
   };
 
   // Remove products from cart
@@ -228,26 +273,43 @@ export const CartProvider = ({ children }) => {
     showToast('Coupon removed', 'info');
   };
 
-  // Calculations
-  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
-  const subtotal = cart.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const originalSubtotal = cart.reduce(
-    (acc, item) => acc + (item.originalPrice || item.price) * item.quantity,
-    0
-  );
-  const itemsDiscount = originalSubtotal - subtotal;
+  // Price calculations with exact weight support
+  const getItemPrice = (item) => {
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    if (isWeightProduct(item) && Number(item.weightInGrams) > 0) {
+      return calculateWeightPrice(item.price, item.weightInGrams, qty);
+    }
+    return Math.round(Number(item.price || 0) * qty * 100) / 100;
+  };
+
+  const getItemOriginalPrice = (item) => {
+    const qty = Math.max(1, Number(item.quantity) || 1);
+    const orig = item.originalPrice || item.price || 0;
+    if (isWeightProduct(item) && Number(item.weightInGrams) > 0) {
+      return calculateWeightPrice(orig, item.weightInGrams, qty);
+    }
+    return Math.round(Number(orig) * qty * 100) / 100;
+  };
+
+  const totalItems = cart.reduce((acc, item) => acc + (item.quantity || 1), 0);
+  const subtotal = Math.round(cart.reduce((acc, item) => acc + getItemPrice(item), 0) * 100) / 100;
+  const originalSubtotal = Math.round(cart.reduce((acc, item) => acc + getItemOriginalPrice(item), 0) * 100) / 100;
+  const itemsDiscount = Math.max(0, Math.round((originalSubtotal - subtotal) * 100) / 100);
   const couponDiscount = Math.round((subtotal * (coupon?.discountPercent || 0)) / 100);
   const freeDeliveryThreshold = settings.freeDeliveryThreshold ?? 199;
   const baseDeliveryFee = settings.deliveryFee ?? 25;
   const isFreeDelivery = subtotal === 0 || (freeDeliveryThreshold > 0 && subtotal >= freeDeliveryThreshold);
   const deliveryFee = isFreeDelivery ? 0 : baseDeliveryFee;
-  const finalTotal = Math.max(0, subtotal - couponDiscount + deliveryFee);
+  const finalTotal = Math.max(0, Math.round((subtotal - couponDiscount + deliveryFee) * 100) / 100);
 
   return (
     <CartContext.Provider
       value={{
         cart,
         addToCart,
+        updateItemWeight,
+        getItemPrice,
+        getItemOriginalPrice,
         removeFromCart,
         increaseQuantity,
         decreaseQuantity,

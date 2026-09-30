@@ -4,6 +4,7 @@ import { orderService } from '../services/orderService';
 import { useAuth } from '../context/AuthContext';
 import { whatsappService } from '../services/whatsappService';
 import { WhatsAppIcon } from '../components/common/WhatsAppIcon';
+import { formatWeight, isWeightProduct } from '../utils/weightUtils';
 
 export const Orders = ({ navigateTo }) => {
   const { user } = useAuth();
@@ -165,26 +166,45 @@ export const Orders = ({ navigateTo }) => {
 
                 {/* Ordered Items List */}
                 <div className="py-3 sm:py-4 space-y-3">
-                  {order.orderItems.map((item, idx) => (
-                    <div key={idx} className="flex items-center justify-between gap-3 text-xs sm:text-sm">
-                      <div className="flex items-center gap-3 min-w-0">
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover bg-slate-100 border border-slate-100 shrink-0"
-                        />
-                        <div className="min-w-0">
-                          <p className="font-bold text-slate-800 truncate">{item.name}</p>
-                          <p className="text-[11px] sm:text-xs text-slate-500">
-                            {item.qty || item.quantity || 1} × ₹{item.price} {item.unit ? `(${item.unit})` : ''}
-                          </p>
+                  {order.orderItems.map((item, idx) => {
+                    const qty = item.qty || item.quantity || 1;
+                    const isWeight = item.isWeightBased || (item.weightInGrams && item.weightInGrams > 0) || isWeightProduct(item.unit || item.name);
+                    const weightGrams = Number(item.weightInGrams || 0);
+
+                    let lineTotal = 0;
+                    if (item.itemTotal !== undefined && item.itemTotal !== null && item.itemTotal > 0) {
+                      lineTotal = Math.round(item.itemTotal * 100) / 100;
+                    } else if (isWeight && weightGrams > 0) {
+                      lineTotal = Math.round(((item.sellingPrice || item.price || 0) / 1000) * weightGrams * qty * 100) / 100;
+                    } else {
+                      lineTotal = Math.round((item.sellingPrice || item.price || 0) * qty * 100) / 100;
+                    }
+
+                    const weightOrQtyStr = isWeight && weightGrams > 0
+                      ? `${formatWeight(weightGrams)} × ${qty}`
+                      : `${qty} ${item.unit ? `(${item.unit})` : 'pack'}`;
+
+                    return (
+                      <div key={idx} className="flex items-center justify-between gap-3 text-xs sm:text-sm">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl object-cover bg-slate-100 border border-slate-100 shrink-0"
+                          />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-800 truncate">{item.name}</p>
+                            <p className="text-[11px] sm:text-xs text-slate-500">
+                              {weightOrQtyStr} • ₹{item.price} {isWeight ? '/kg' : ''}
+                            </p>
+                          </div>
                         </div>
+                        <span className="font-bold text-slate-800 whitespace-nowrap">
+                          ₹{lineTotal}
+                        </span>
                       </div>
-                      <span className="font-bold text-slate-800 whitespace-nowrap">
-                        ₹{item.price * (item.qty || item.quantity || 1)}
-                      </span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Footer Info: Address & Payment */}

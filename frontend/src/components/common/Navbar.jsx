@@ -18,9 +18,10 @@ import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import { productService } from '../../services/productService';
+import { isWeightProduct, calculateWeightPrice } from '../../utils/weightUtils';
 
 export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
-  const { totalItems, freeDeliveryThreshold } = useCart();
+  const { totalItems, freeDeliveryThreshold, addToCart } = useCart();
   const { totalWishlist } = useWishlist();
   const { user, isAuthenticated, logout } = useAuth();
 
@@ -49,15 +50,15 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
   const handleSearchChange = (e) => {
     const val = e.target.value;
     setSearchQuery(val);
-    if (val.trim().length > 1) {
+    if (val.trim().length >= 1) {
       productService.getAllProducts({ search: val }).then(res => {
         if (res && res.products) {
-          setSearchResults(res.products.slice(0, 5));
+          setSearchResults(res.products.slice(0, 6));
           setShowSearchDropdown(true);
         }
       }).catch(() => {
         const results = productService.searchAndFilterLocal({ query: val });
-        setSearchResults(results.slice(0, 5));
+        setSearchResults(results.slice(0, 6));
         setShowSearchDropdown(true);
       });
     } else {
@@ -136,6 +137,11 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
               <input
                 type="text"
                 value={searchQuery}
+                onFocus={() => {
+                  if (searchQuery.trim().length >= 1 && searchResults.length > 0) {
+                    setShowSearchDropdown(true);
+                  }
+                }}
                 onChange={handleSearchChange}
                 placeholder="Search products..."
                 className="w-full pl-4 pr-12 py-2.5 bg-slate-50 hover:bg-slate-100/80 focus:bg-white text-sm text-slate-800 placeholder-slate-400 border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
@@ -148,30 +154,74 @@ export const Navbar = ({ activePage, navigateTo, onOpenSearch }) => {
               </button>
             </form>
 
-            {/* Live Search Autocomplete Dropdown */}
+            {/* Live Search Autocomplete Dropdown with Custom Unit & Price Preview */}
             {showSearchDropdown && searchResults.length > 0 && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 overflow-hidden animate-fadeIn">
-                <div className="px-3 py-1.5 text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  Products ({searchResults.length})
+              <div className="absolute left-0 right-0 top-full mt-2 bg-white rounded-2xl shadow-xl border border-slate-100 p-2 z-50 overflow-hidden animate-fadeIn max-h-96 overflow-y-auto">
+                <div className="px-3 py-1.5 text-[11px] font-bold text-slate-400 uppercase tracking-wider flex justify-between">
+                  <span>Product Suggestions ({searchResults.length})</span>
+                  <span>Quick Unit Add</span>
                 </div>
-                {searchResults.map((prod) => (
-                  <div
-                    key={prod.id || prod._id}
-                    onClick={() => selectSearchResult(prod)}
-                    className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors"
-                  >
-                    <img 
-                      src={prod.image} 
-                      alt={prod.name} 
-                      className="w-10 h-10 object-cover rounded-lg bg-slate-100" 
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-slate-800 truncate">{prod.name}</p>
-                      <p className="text-xs text-slate-500">{prod.unit} • <span className="font-bold text-brand-600">₹{prod.price}</span></p>
+                {searchResults.map((prod) => {
+                  const pid = prod.id || prod._id;
+                  const isW = isWeightProduct(prod);
+                  return (
+                    <div
+                      key={pid}
+                      onClick={() => selectSearchResult(prod)}
+                      className="flex items-center justify-between gap-2 p-2 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <img 
+                          src={prod.image} 
+                          alt={prod.name} 
+                          className="w-10 h-10 object-cover rounded-lg bg-slate-100 shrink-0" 
+                        />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{prod.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {isW ? 'Per kg' : prod.unit} • <span className="font-bold text-brand-600">₹{prod.price}</span>
+                          </p>
+                        </div>
+                      </div>
+                      <div
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 shrink-0"
+                      >
+                        {isW ? (
+                          [
+                            { label: '250g', g: 250 },
+                            { label: '500g', g: 500 },
+                            { label: '1kg', g: 1000 }
+                          ].map((opt) => (
+                            <button
+                              key={opt.label}
+                              type="button"
+                              onClick={() => {
+                                addToCart({ ...prod, id: pid, _id: pid }, 1, opt.g);
+                                setShowSearchDropdown(false);
+                              }}
+                              className="px-1.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-600 hover:text-white text-emerald-800 border border-emerald-200 text-[10px] font-bold transition-colors cursor-pointer"
+                              title={`Add ${opt.label} for ₹${calculateWeightPrice(prod.price, opt.g, 1)}`}
+                            >
+                              {opt.label} ₹{calculateWeightPrice(prod.price, opt.g, 1)}
+                            </button>
+                          ))
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              addToCart({ ...prod, id: pid, _id: pid }, 1);
+                              setShowSearchDropdown(false);
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-brand-500 hover:bg-brand-600 text-white text-[11px] font-bold cursor-pointer"
+                          >
+                            + Add
+                          </button>
+                        )}
+                      </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-slate-300" />
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -10,18 +10,19 @@ import {
   CheckCircle2, 
   Truck, 
   ShieldCheck, 
-  ArrowLeft,
-  X,
-  CreditCard,
-  MapPin,
-  Sparkles,
-  Copy,
-  Loader2,
-  FileText,
-  User,
-  Phone,
-  Home,
-  Check
+  ArrowLeft, 
+  X, 
+  CreditCard, 
+  MapPin, 
+  Sparkles, 
+  Copy, 
+  Loader2, 
+  FileText, 
+  User, 
+  Phone, 
+  Home, 
+  Check,
+  Scale
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -29,6 +30,214 @@ import { orderService } from '../services/orderService';
 import { whatsappService } from '../services/whatsappService';
 import { whatsAppContactService } from '../services/whatsAppContactService';
 import { WhatsAppIcon } from '../components/common/WhatsAppIcon';
+import { 
+  isWeightProduct, 
+  isVolumeProduct, 
+  formatWeight, 
+  calculateWeightPrice, 
+  getItemLineTotal 
+} from '../utils/weightUtils';
+
+// Fast Inline Cart Item with Instant Weight Editing & Quantity Stepper
+const CartItemCard = ({
+  item,
+  onUpdateQuantity,
+  onUpdateWeight,
+  onRemove
+}) => {
+  const itemId = item._id || item.id;
+  const isWeight = isWeightProduct(item);
+  const isVolume = isVolumeProduct(item);
+  const isMeasurable = isWeight || isVolume;
+
+  const currentWeightGrams = Number(item.weightInGrams || (isWeight ? 1000 : 0));
+  const initialUnit = currentWeightGrams < 1000 ? (isVolume ? 'ml' : 'g') : (isVolume ? 'L' : 'kg');
+  const [unit, setUnit] = useState(initialUnit);
+  const [inputWeight, setInputWeight] = useState(() => {
+    if (initialUnit === 'kg' || initialUnit === 'L') {
+      return (Math.round((currentWeightGrams / 1000) * 1000) / 1000).toString();
+    }
+    return Math.round(currentWeightGrams).toString();
+  });
+
+  // Sync state if external cart changes
+  useEffect(() => {
+    if (unit === 'kg' || unit === 'L') {
+      setInputWeight((Math.round((currentWeightGrams / 1000) * 1000) / 1000).toString());
+    } else {
+      setInputWeight(Math.round(currentWeightGrams).toString());
+    }
+  }, [currentWeightGrams, unit]);
+
+  const handleUnitToggle = (newUnit) => {
+    const val = parseFloat(inputWeight);
+    if (!isNaN(val) && val > 0) {
+      if ((unit === 'kg' || unit === 'L') && (newUnit === 'g' || newUnit === 'ml')) {
+        setInputWeight(Math.round(val * 1000).toString());
+      } else if ((unit === 'g' || unit === 'ml') && (newUnit === 'kg' || newUnit === 'L')) {
+        setInputWeight((Math.round((val / 1000) * 1000) / 1000).toString());
+      }
+    }
+    setUnit(newUnit);
+  };
+
+  const handleWeightChange = (e) => {
+    const val = e.target.value;
+    setInputWeight(val);
+    const parsed = parseFloat(val);
+    if (!isNaN(parsed) && parsed > 0) {
+      const grams = (unit === 'kg' || unit === 'L')
+        ? Math.round(parsed * 1000)
+        : Math.round(parsed);
+      onUpdateWeight(itemId, grams);
+    }
+  };
+
+  const lineTotal = isMeasurable
+    ? calculateWeightPrice(item.price, currentWeightGrams, item.quantity)
+    : Math.round(Number(item.price || 0) * (item.quantity || 1) * 100) / 100;
+
+  const originalTotal = item.originalPrice && item.originalPrice > item.price
+    ? (isMeasurable
+        ? calculateWeightPrice(item.originalPrice, currentWeightGrams, item.quantity)
+        : Math.round(Number(item.originalPrice) * (item.quantity || 1) * 100) / 100)
+    : null;
+
+  return (
+    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center gap-4 hover:border-slate-300 transition-colors">
+      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+        <img 
+          src={item.image} 
+          alt={item.name}
+          className="w-18 h-18 sm:w-22 sm:h-22 object-cover rounded-xl bg-slate-50 border border-slate-100 shrink-0" 
+        />
+
+        <div className="flex-1 min-w-0">
+          <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
+            {item.name}
+          </h3>
+
+          {/* Rate and unit tag */}
+          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 font-medium">
+            <span>₹{item.price} / {isWeight ? 'kg' : isVolume ? 'litre' : item.unit || 'pack'}</span>
+            {isMeasurable && (
+              <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
+                Weight Measured
+              </span>
+            )}
+          </p>
+
+          {/* Exact Inline Weight Input (For Weight-Based Products) */}
+          {isMeasurable ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
+                <input
+                  type="number"
+                  step="any"
+                  min="0.001"
+                  value={inputWeight}
+                  onChange={handleWeightChange}
+                  className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-900 text-center focus:outline-none focus:ring-1 focus:ring-brand-500"
+                  title="Edit exact measured weight"
+                />
+                <div className="flex ml-1">
+                  {isVolume ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleUnitToggle('L')}
+                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'L' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
+                      >
+                        L
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUnitToggle('ml')}
+                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'ml' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
+                      >
+                        ml
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => handleUnitToggle('kg')}
+                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'kg' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
+                      >
+                        kg
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleUnitToggle('g')}
+                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'g' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
+                      >
+                        g
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Exact Weight Label */}
+              <span className="text-xs font-bold text-slate-700 bg-brand-50 text-brand-800 px-2 py-1 rounded-lg">
+                {formatWeight(currentWeightGrams)}
+                {item.quantity > 1 ? ` × ${item.quantity} = ${formatWeight(currentWeightGrams * item.quantity)}` : ''}
+              </span>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 mt-1">
+              Quantity: {item.quantity} {item.unit ? `(${item.unit})` : ''}
+            </p>
+          )}
+
+          {/* Line Price Display */}
+          <div className="flex items-baseline gap-2 mt-2">
+            <span className="text-base sm:text-lg font-black text-slate-900">
+              ₹{lineTotal}
+            </span>
+            {originalTotal && (
+              <span className="text-xs text-slate-400 line-through">
+                ₹{originalTotal}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quantity Stepper & Remove */}
+      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+        <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50/50 p-1">
+          <button
+            onClick={() => onUpdateQuantity(itemId, -1)}
+            className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
+            title="Decrease quantity"
+          >
+            <Minus className="w-3.5 h-3.5" />
+          </button>
+          <span className="w-8 text-center text-xs font-black text-slate-900">
+            {item.quantity}
+          </span>
+          <button
+            onClick={() => onUpdateQuantity(itemId, 1)}
+            className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
+            title="Increase quantity"
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
+        <button
+          onClick={() => onRemove(itemId)}
+          className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+          title="Remove item"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+};
 
 export const Cart = ({ navigateTo: propNavigateTo }) => {
   const navigate = useNavigate();
@@ -44,6 +253,8 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
     updateQuantity, 
     increaseQuantity,
     decreaseQuantity,
+    updateItemWeight,
+    getItemPrice,
     removeFromCart, 
     clearCart, 
     totalItems, 
@@ -162,14 +373,27 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
 
     try {
       const orderPayload = {
-        orderItems: cart.map((item) => ({
-          product: item._id || item.id,
-          name: item.name,
-          qty: item.quantity,
-          price: item.price,
-          unit: item.unit || '',
-          image: item.image
-        })),
+        orderItems: cart.map((item) => {
+          const qty = item.quantity || 1;
+          const isWeight = isWeightProduct(item);
+          const weightInGrams = Number(item.weightInGrams || (isWeight ? 1000 : 0));
+          const lineTotal = getItemPrice ? getItemPrice(item) : getItemLineTotal(item);
+          return {
+            product: item._id || item.id,
+            productId: item._id || item.id,
+            name: item.name,
+            qty,
+            quantity: qty,
+            weightInGrams: isWeight ? weightInGrams : 0,
+            isWeightBased: isWeight,
+            price: item.price,
+            sellingPrice: item.price,
+            originalPrice: item.originalPrice || item.price,
+            itemTotal: lineTotal,
+            unit: item.unit || '',
+            image: item.image
+          };
+        }),
         shippingAddress: {
           fullName: customerName.trim(),
           address: customerAddress.trim(),
@@ -239,14 +463,27 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
 
     try {
       const orderData = {
-        orderItems: cart.map((item) => ({
-          product: item._id || item.id,
-          name: item.name,
-          qty: item.quantity,
-          price: item.price,
-          unit: item.unit || '',
-          image: item.image
-        })),
+        orderItems: cart.map((item) => {
+          const qty = item.quantity || 1;
+          const isWeight = isWeightProduct(item);
+          const weightInGrams = Number(item.weightInGrams || (isWeight ? 1000 : 0));
+          const lineTotal = getItemPrice ? getItemPrice(item) : getItemLineTotal(item);
+          return {
+            product: item._id || item.id,
+            productId: item._id || item.id,
+            name: item.name,
+            qty,
+            quantity: qty,
+            weightInGrams: isWeight ? weightInGrams : 0,
+            isWeightBased: isWeight,
+            price: item.price,
+            sellingPrice: item.price,
+            originalPrice: item.originalPrice || item.price,
+            itemTotal: lineTotal,
+            unit: item.unit || '',
+            image: item.image
+          };
+        }),
         shippingAddress: {
           fullName: customerName.trim(),
           address: customerAddress.trim(),
@@ -371,70 +608,15 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         
         {/* Left 2 Cols: Cart Item List */}
         <div className="lg:col-span-2 space-y-4">
-          {cart.map((item) => {
-            const itemId = item._id || item.id;
-            return (
-              <div 
-                key={itemId}
-                className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex items-center gap-4 hover:border-slate-300 transition-colors"
-              >
-                <img 
-                  src={item.image} 
-                  alt={item.name}
-                  className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-xl bg-slate-50 border border-slate-100 shrink-0" 
-                />
-
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
-                    {item.name}
-                  </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    {item.unit || 'Standard Pack'}
-                  </p>
-
-                  <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-base font-black text-slate-900">
-                      ₹{item.price}
-                    </span>
-                    {item.originalPrice > item.price && (
-                      <span className="text-xs text-slate-400 line-through">
-                        ₹{item.originalPrice}
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Quantity Controls */}
-                <div className="flex flex-col sm:flex-row items-center gap-3 shrink-0">
-                  <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50/50 p-1">
-                    <button
-                      onClick={() => decreaseQuantity(itemId)}
-                      className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Minus className="w-3.5 h-3.5" />
-                    </button>
-                    <span className="w-8 text-center text-xs font-black text-slate-900">
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => increaseQuantity(itemId)}
-                      className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
-                    >
-                      <Plus className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-
-                  <button
-                    onClick={() => removeFromCart(itemId)}
-                    className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
-                    title="Remove item"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+          {cart.map((item) => (
+            <CartItemCard
+              key={item._id || item.id}
+              item={item}
+              onUpdateQuantity={(id, delta) => updateQuantity(id, delta)}
+              onUpdateWeight={(id, newWeight) => updateItemWeight(id, newWeight)}
+              onRemove={(id) => removeFromCart(id)}
+            />
+          ))}
         </div>
 
         {/* Right Col: Bill Summary Card */}
@@ -645,16 +827,26 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">
                 Reviewing Items ({totalItems})
               </span>
-              {cart.map((item, i) => (
-                <div key={i} className="flex justify-between items-center text-xs">
-                  <span className="text-slate-700 truncate max-w-[240px]">
-                    {item.name} × <strong>{item.quantity}</strong>
-                  </span>
-                  <span className="font-bold text-slate-900 shrink-0">
-                    ₹{item.price * item.quantity}
-                  </span>
-                </div>
-              ))}
+              {cart.map((item, i) => {
+                const isWeight = isWeightProduct(item);
+                const isVolume = isVolumeProduct(item);
+                const isMeasurable = isWeight || isVolume;
+                const weightGrams = Number(item.weightInGrams || (isWeight ? 1000 : 0));
+                const lineTotal = getItemPrice ? getItemPrice(item) : getItemLineTotal(item);
+                const desc = isMeasurable
+                  ? `${item.name} (${formatWeight(weightGrams)}${item.quantity > 1 ? ` × ${item.quantity}` : ''})`
+                  : `${item.name} × ${item.quantity}`;
+                return (
+                  <div key={i} className="flex justify-between items-center text-xs">
+                    <span className="text-slate-700 truncate max-w-[240px]">
+                      {desc}
+                    </span>
+                    <span className="font-bold text-slate-900 shrink-0">
+                      ₹{lineTotal}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Bill Summary Breakdown */}

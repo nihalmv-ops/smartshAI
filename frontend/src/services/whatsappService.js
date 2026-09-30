@@ -1,4 +1,6 @@
-// Skyline Mart Direct WhatsApp Order Messaging Service
+import { formatWeight, isWeightProduct } from '../utils/weightUtils';
+
+// Skyline Mart / SmartMart AI Direct WhatsApp Order Messaging Service
 
 const STORAGE_KEY = 'smartmart_admin_whatsapp_phone';
 export const DEFAULT_ADMIN_PHONE = '919876543210';
@@ -31,7 +33,6 @@ export const whatsappService = {
   cleanPhone: (phone) => {
     if (!phone) return '';
     let cleaned = phone.toString().replace(/\D/g, '');
-    // If standard 10 digit Indian number without country code, prepend 91
     if (cleaned.length === 10) {
       cleaned = '91' + cleaned;
     }
@@ -39,12 +40,12 @@ export const whatsappService = {
   },
 
   /**
-   * Clean, formatted customer order receipt matching store owner specs
+   * Clean, formatted customer order receipt matching SmartMart AI exact weight specs
    */
   formatCustomerOrderMessage: (order) => {
     if (!order) return '';
 
-    const orderId = (order._id || order.id || 'NEW').toString().slice(-8).toUpperCase();
+    const orderId = (order.receiptNumber || order._id || order.id || 'NEW').toString().slice(-8).toUpperCase();
     const customerName = order.shippingAddress?.fullName || order.user?.name || 'Customer';
     const customerPhone = order.shippingAddress?.phone || order.user?.phone || '';
     const address = order.shippingAddress?.address || 'Doorstep Delivery';
@@ -57,25 +58,44 @@ export const whatsappService = {
     const itemsFormatted = items.length > 0
       ? items.map((item) => {
           const qty = item.qty || item.quantity || 1;
-          const price = item.price ? `₹${item.price * qty}` : '₹0';
-          return `Product: ${item.name}\nQuantity: ${qty}\nPrice: ${price}`;
+          const isWeight = item.isWeightBased || (item.weightInGrams && item.weightInGrams > 0) || isWeightProduct(item.unit || item.name);
+          const weightInGrams = Number(item.weightInGrams || 0);
+
+          let linePrice = 0;
+          if (item.itemTotal !== undefined && item.itemTotal !== null && item.itemTotal > 0) {
+            linePrice = Math.round(item.itemTotal * 100) / 100;
+          } else if (isWeight && weightInGrams > 0) {
+            linePrice = Math.round(((item.sellingPrice || item.price || 0) / 1000) * weightInGrams * qty * 100) / 100;
+          } else {
+            linePrice = Math.round((item.sellingPrice || item.price || 0) * qty * 100) / 100;
+          }
+
+          let weightOrQtyStr = '';
+          if (isWeight && weightInGrams > 0) {
+            const formattedW = formatWeight(weightInGrams);
+            weightOrQtyStr = `${formattedW} × ${qty}`;
+          } else {
+            weightOrQtyStr = `${qty} ${item.unit || 'piece'}${qty > 1 && !item.unit?.endsWith('s') ? 's' : ''}`;
+          }
+
+          return `${item.name}\n${weightOrQtyStr}\n₹${linePrice}`;
         }).join('\n\n')
-      : 'Product: Assorted Groceries\nQuantity: 1\nPrice: ₹' + (order.totalPrice || 0);
+      : 'Assorted Groceries\n1 pack\n₹' + (order.totalPrice || 0);
 
     const subtotal = order.itemsPrice !== undefined ? `₹${order.itemsPrice}` : `₹${order.totalPrice || 0}`;
     const delivery = order.deliveryFee === 0 ? 'FREE' : `₹${order.deliveryFee || 0}`;
     const discount = order.discount > 0 ? `₹${order.discount}` : '₹0';
     const total = `₹${order.totalPrice || 0}`;
 
-    let msg = `Hello Skyline Mart 👋\nI would like to place an order.\n\nOrder Details:\n${itemsFormatted}\n\nSubtotal: ${subtotal}\nDelivery: ${delivery}\n`;
+    let msg = `🛒 SMARTMART AI ORDER\nOrder ID: #${orderId}\n\nProducts:\n\n${itemsFormatted}\n\nSubtotal: ${subtotal}\nDelivery: ${delivery}\n`;
     if (order.discount > 0) {
       msg += `Discount: ${discount}\n`;
     }
-    msg += `Total: ${total}\n\nCustomer Details:\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${address}${city}${postalCode}\n`;
+    msg += `TOTAL: ${total}\n\nCustomer:\nName: ${customerName}\nPhone: ${customerPhone}\nAddress: ${address}${city}${postalCode}\n`;
     if (deliveryNotes) {
       msg += `Optional Delivery Notes: ${deliveryNotes}\n`;
     }
-    msg += `Payment Method: ${payment}\nOrder ID: #${orderId}\n\nPlease confirm my order. Thank you!`;
+    msg += `\nPayment:\n${payment}\n\nPlease confirm my order. Thank you!`;
 
     return msg;
   },

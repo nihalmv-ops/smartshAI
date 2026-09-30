@@ -22,6 +22,8 @@ const orderSchema = new mongoose.Schema(
         isPriceOverridden: { type: Boolean, default: false },
         category: { type: String, default: 'grocery' },
         unit: { type: String },
+        weightInGrams: { type: Number, default: 0 },
+        isWeightBased: { type: Boolean, default: false },
         product: {
           type: mongoose.Schema.Types.ObjectId,
           required: true,
@@ -43,6 +45,7 @@ const orderSchema = new mongoose.Schema(
         differencePerUnit: { type: Number, default: 0 },
         qty: { type: Number, default: 1 },
         quantity: { type: Number, default: 1 },
+        weightInGrams: { type: Number, default: 0 },
         changedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
         changedByName: { type: String, default: 'Admin' },
         date: { type: Date, default: Date.now },

@@ -1,19 +1,25 @@
 import mongoose from 'mongoose';
 import dns from 'dns';
 
-// Fix for Node.js SRV resolution issue on Windows ISP DNS
-try {
-  dns.setDefaultResultOrder('ipv4first');
-  dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
-} catch (dnsErr) {
-  // Ignore if DNS server configuration is locked
+// Fix for Node.js SRV resolution issue on Windows ISP DNS only
+if (process.platform === 'win32') {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+    dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']);
+  } catch (dnsErr) {
+    // Ignore if DNS server configuration is locked
+  }
 }
 
 const connectDB = async () => {
   let primaryUri = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/smartmart_ai';
-  // If Atlas URI without database name, append database name
-  if (primaryUri.startsWith('mongodb+srv://') && !primaryUri.includes('mongodb.net/')) {
-    primaryUri = primaryUri.replace('mongodb.net', 'mongodb.net/smartmart_ai?retryWrites=true&w=majority');
+  // Ensure a database name is specified for Atlas connection
+  if (primaryUri.startsWith('mongodb+srv://')) {
+    if (primaryUri.includes('mongodb.net/?')) {
+      primaryUri = primaryUri.replace('mongodb.net/?', 'mongodb.net/smartmart_ai?');
+    } else if (primaryUri.endsWith('mongodb.net') || primaryUri.endsWith('mongodb.net/')) {
+      primaryUri = primaryUri.replace(/mongodb\.net\/?$/, 'mongodb.net/smartmart_ai');
+    }
   }
 
   try {

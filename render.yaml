@@ -1,0 +1,70 @@
+services:
+  # 1. Backend REST API (Render Free Web Service)
+  - type: web
+    name: smartmart-ai-backend
+    runtime: node
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    plan: free
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 30d
+      - key: ADMIN_SECRET_KEY
+        value: SMARTMART_ADMIN_2026
+      - key: CLIENT_URL
+        fromService:
+          type: web
+          name: smartmart-ai-storefront
+          property: host
+      - key: ADMIN_URL
+        fromService:
+          type: web
+          name: smartmart-ai-admin-pos
+          property: host
+
+  # 2. Customer Storefront (Render Free Static Site)
+  - type: web
+    name: smartmart-ai-storefront
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: smartmart-ai-backend
+          property: host
+          suffix: /api
+
+  # 3. Admin & Offline POS Portal (Render Free Static Site)
+  - type: web
+    name: smartmart-ai-admin-pos
+    runtime: static
+    rootDir: admin
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_URL
+        fromService:
+          type: web
+          name: smartmart-ai-backend
+          property: host
+          suffix: /api
+      - key: VITE_ADMIN_WHATSAPP_PHONE
+        value: "9180064932467"

@@ -9,7 +9,11 @@
     "backend": "npm run dev --prefix backend",
     "build:frontend": "npm run build --prefix frontend",
     "build:admin": "npm run build --prefix admin",
-    "start:backend": "npm run start --prefix backend"
+    "build:all": "npm run build --prefix frontend && npm run build --prefix admin",
+    "install:all": "npm install --prefix backend && npm install --prefix frontend && npm install --prefix admin",
+    "start:backend": "npm run start --prefix backend",
+    "seed": "npm run data:import --prefix backend",
+    "create-admin": "npm run create-admin --prefix backend"
   }
 }
 

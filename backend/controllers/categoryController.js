@@ -40,18 +40,33 @@ export const getCategories = async (req, res, next) => {
   }
 };
 
+// Helper to find category by ObjectId, slug, or clean slug/name
+const findCategoryByIdentifier = async (identifier) => {
+  if (!identifier) return null;
+  const trimmed = String(identifier).trim();
+  const cleanSlug = trimmed.toLowerCase().replace(/^cat_/, '').replace(/_\d+$/, '').trim();
+
+  const queryOr = [
+    { slug: trimmed.toLowerCase() },
+    { slug: cleanSlug },
+    { name: new RegExp(`^${trimmed}$`, 'i') },
+    { name: new RegExp(`^${cleanSlug}$`, 'i') }
+  ];
+
+  if (trimmed.match(/^[0-9a-fA-F]{24}$/)) {
+    queryOr.push({ _id: trimmed });
+  }
+
+  return await Category.findOne({ $or: queryOr });
+};
+
 // @desc    Get category by ID or slug
 // @route   GET /api/categories/:id
 // @access  Public
 export const getCategoryByIdOrSlug = async (req, res, next) => {
   try {
     const identifier = req.params.id;
-    let category;
-    if (identifier.match(/^[0-9a-fA-F]{24}$/)) {
-      category = await Category.findById(identifier);
-    } else {
-      category = await Category.findOne({ slug: identifier.toLowerCase() });
-    }
+    const category = await findCategoryByIdentifier(identifier);
 
     if (!category) {
       res.status(404);
@@ -127,12 +142,7 @@ export const createCategory = async (req, res, next) => {
 export const updateCategory = async (req, res, next) => {
   try {
     const identifier = req.params.id;
-    let category = await Category.findOne({
-      $or: [
-        ...(identifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: identifier }] : []),
-        { slug: identifier.toLowerCase() }
-      ]
-    });
+    let category = await findCategoryByIdentifier(identifier);
 
     if (!category) {
       res.status(404);
@@ -179,12 +189,7 @@ export const updateCategory = async (req, res, next) => {
 export const deleteCategory = async (req, res, next) => {
   try {
     const identifier = req.params.id;
-    let category = await Category.findOne({
-      $or: [
-        ...(identifier.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: identifier }] : []),
-        { slug: identifier.toLowerCase() }
-      ]
-    });
+    let category = await findCategoryByIdentifier(identifier);
 
     if (!category) {
       res.status(404);

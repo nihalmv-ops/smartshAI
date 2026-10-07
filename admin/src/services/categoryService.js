@@ -79,7 +79,7 @@ export const categoryService = {
   getAllCategories: async () => {
     try {
       const response = await api.get('/categories');
-      if (response.data && response.data.categories && response.data.categories.length > 0) {
+      if (response.data && Array.isArray(response.data.categories)) {
         return response.data.categories;
       }
       return defaultCategories;
@@ -90,7 +90,7 @@ export const categoryService = {
   },
 
   getCategoryById: async (id) => {
-    const response = await api.get(/categories/);
+    const response = await api.get(`/categories/${id}`);
     return response.data;
   },
 
@@ -100,12 +100,12 @@ export const categoryService = {
   },
 
   updateCategory: async (id, categoryData) => {
-    const response = await api.put(/categories/, categoryData);
+    const response = await api.put(`/categories/${id}`, categoryData);
     return response.data;
   },
 
   deleteCategory: async (id) => {
-    const response = await api.delete(/categories/);
+    const response = await api.delete(`/categories/${id}`);
     return response.data;
   },
 

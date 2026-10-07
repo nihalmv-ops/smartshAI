@@ -19,7 +19,7 @@ import { useAdminAuth } from '../context/AdminAuthContext';
 export const AdminLogin = () => {
   const navigate = useNavigate();
   const { login, registerAdmin } = useAdminAuth();
-  const storefrontUrl = import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173';
+  const storefrontUrl = import.meta.env.VITE_STOREFRONT_URL || 'https://smartsh-ai-hrkd.vercel.app';
 
   const [activeMode, setActiveMode] = useState('login'); // 'login' | 'register'
   const [error, setError] = useState('');
@@ -136,7 +136,7 @@ export const AdminLogin = () => {
           <div>
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-brand-500/10 text-brand-400 border border-brand-500/20 mb-2">
               <span className="w-1.5 h-1.5 rounded-full bg-brand-400 animate-pulse"></span>
-              Isolated Admin Site • Port 5174
+              Isolated Admin Portal
             </div>
             <h2 className="text-xl sm:text-3xl font-black text-white tracking-tight">
               Skyline Mart Admin Portal
@@ -388,7 +388,7 @@ export const AdminLogin = () => {
               rel="noreferrer"
               className="text-xs text-slate-400 hover:text-white transition-colors inline-flex items-center gap-1.5"
             >
-              <span>Visit Customer Storefront (Port 5173)</span>
+              <span>Visit Customer Storefront</span>
               <ExternalLink className="w-3 h-3" />
             </a>
           </div>

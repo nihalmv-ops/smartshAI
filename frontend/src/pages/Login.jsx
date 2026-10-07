@@ -247,13 +247,15 @@ export const Login = ({ navigateTo }) => {
               </button>
             </div>
             <div className="pt-1.5">
-              <button
-                onClick={() => navigateTo('admin/login')}
+              <a
+                href={import.meta.env.VITE_ADMIN_URL || 'https://smartsh-ai.vercel.app'}
+                target="_blank"
+                rel="noreferrer"
                 className="text-slate-400 hover:text-brand-600 font-medium inline-flex items-center gap-1.5 transition-colors cursor-pointer"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-brand-500" />
                 <span>Store Administrator? Access Admin Portal →</span>
-              </button>
+              </a>
             </div>
           </div>
         </div>

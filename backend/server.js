@@ -41,14 +41,20 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:3000',
   'http://localhost:3001',
+  'https://smartsh-ai-hrkd.vercel.app',
+  'https://smartsh-ai.vercel.app',
   process.env.CLIENT_URL,
   process.env.ADMIN_URL
 ].filter(Boolean);
 
 app.use(cors({
-  origin: process.env.CLIENT_URL || '*',
   origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin) || origin.startsWith('http://localhost:')) {
+    if (
+      !origin ||
+      allowedOrigins.includes(origin) ||
+      origin.startsWith('http://localhost:') ||
+      origin.endsWith('.vercel.app')
+    ) {
       return callback(null, true);
     }
     return callback(null, true);

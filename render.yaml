@@ -19,15 +19,9 @@ services:
       - key: ADMIN_SECRET_KEY
         value: SMARTMART_ADMIN_2026
       - key: CLIENT_URL
-        fromService:
-          type: web
-          name: smartmart-ai-storefront
-          property: host
+        value: https://smartsh-ai-hrkd.vercel.app
       - key: ADMIN_URL
-        fromService:
-          type: web
-          name: smartmart-ai-admin-pos
-          property: host
+        value: https://smartsh-ai.vercel.app
 
   # 2. Customer Storefront (Render Free Static Site)
   - type: web

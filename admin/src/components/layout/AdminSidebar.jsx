@@ -23,7 +23,7 @@ import { useAdminAuth } from '../../context/AdminAuthContext';
 
 export const AdminSidebar = ({ isOpen, onClose }) => {
   const { user, logout } = useAdminAuth();
-  const storefrontUrl = import.meta.env.VITE_STOREFRONT_URL || 'http://localhost:5173';
+  const storefrontUrl = import.meta.env.VITE_STOREFRONT_URL || 'https://smartsh-ai-hrkd.vercel.app';
 
   const navGroups = [
     {

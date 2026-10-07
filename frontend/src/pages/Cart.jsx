@@ -22,7 +22,10 @@ import {
   Phone, 
   Home, 
   Check,
-  Scale
+  Scale,
+  Banknote,
+  Percent,
+  Sparkle
 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
@@ -104,113 +107,162 @@ const CartItemCard = ({
     : null;
 
   return (
-    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/80 shadow-xs flex flex-col sm:flex-row sm:items-center gap-4 hover:border-slate-300 transition-colors">
-      <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
-        <img 
-          src={item.image} 
-          alt={item.name}
-          className="w-18 h-18 sm:w-22 sm:h-22 object-cover rounded-xl bg-slate-50 border border-slate-100 shrink-0" 
-        />
+    <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200/90 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:border-slate-300 hover:shadow-md transition-all">
+      {/* Product Image & Details */}
+      <div className="flex items-start sm:items-center gap-3.5 sm:gap-4 flex-1 min-w-0">
+        <div className="relative shrink-0">
+          <img 
+            src={item.image} 
+            alt={item.name}
+            className="w-20 h-20 sm:w-24 sm:h-24 object-cover rounded-2xl bg-slate-50 border border-slate-100 shadow-sm" 
+          />
+          {isMeasurable && (
+            <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-800 text-[9px] font-black border border-amber-200 shadow-sm">
+              {formatWeight(currentWeightGrams)}
+            </span>
+          )}
+        </div>
 
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm sm:text-base font-bold text-slate-900 truncate">
-            {item.name}
-          </h3>
+          <div className="flex items-start justify-between gap-2">
+            <h3 className="text-sm sm:text-base font-extrabold text-slate-900 truncate">
+              {item.name}
+            </h3>
+            {/* Quick delete on mobile */}
+            <button
+              onClick={() => onRemove(itemId)}
+              className="sm:hidden p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+              title="Remove item"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
 
           {/* Rate and unit tag */}
-          <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-1.5 font-medium">
-            <span>₹{item.price} / {isWeight ? 'kg' : isVolume ? 'litre' : item.unit || 'pack'}</span>
-            {isMeasurable && (
-              <span className="px-1.5 py-0.2 rounded bg-amber-50 text-amber-700 text-[10px] font-bold border border-amber-200">
-                Weight Measured
-              </span>
-            )}
-          </p>
-
-          {/* Exact Inline Weight Input (For Weight-Based Products) */}
-          {isMeasurable ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <div className="flex items-center bg-slate-50 border border-slate-200 rounded-xl p-0.5">
-                <input
-                  type="number"
-                  step="any"
-                  min="0.001"
-                  value={inputWeight}
-                  onChange={handleWeightChange}
-                  className="w-20 px-2 py-1 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-900 text-center focus:outline-none focus:ring-1 focus:ring-brand-500"
-                  title="Edit exact measured weight"
-                />
-                <div className="flex ml-1">
-                  {isVolume ? (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleUnitToggle('L')}
-                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'L' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
-                      >
-                        L
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUnitToggle('ml')}
-                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'ml' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
-                      >
-                        ml
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => handleUnitToggle('kg')}
-                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'kg' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
-                      >
-                        kg
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleUnitToggle('g')}
-                        className={`px-1.5 py-0.5 text-[10px] font-black rounded ${unit === 'g' ? 'bg-brand-500 text-white' : 'text-slate-600'}`}
-                      >
-                        g
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              {/* Exact Weight Label */}
-              <span className="text-xs font-bold text-slate-700 bg-brand-50 text-brand-800 px-2 py-1 rounded-lg">
-                {formatWeight(currentWeightGrams)}
-                {item.quantity > 1 ? ` × ${item.quantity} = ${formatWeight(currentWeightGrams * item.quantity)}` : ''}
-              </span>
-            </div>
-          ) : (
-            <p className="text-xs text-slate-400 mt-1">
-              Quantity: {item.quantity} {item.unit ? `(${item.unit})` : ''}
-            </p>
-          )}
-
-          {/* Line Price Display */}
-          <div className="flex items-baseline gap-2 mt-2">
-            <span className="text-base sm:text-lg font-black text-slate-900">
-              ₹{lineTotal}
+          <div className="flex items-center gap-2 mt-1">
+            <span className="text-xs text-slate-600 font-semibold">
+              ₹{item.price} / {isWeight ? 'kg' : isVolume ? 'litre' : item.unit || 'pack'}
             </span>
-            {originalTotal && (
-              <span className="text-xs text-slate-400 line-through">
-                ₹{originalTotal}
+            {item.originalPrice && item.originalPrice > item.price && (
+              <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/80">
+                {Math.round(((item.originalPrice - item.price) / item.originalPrice) * 100)}% OFF
               </span>
             )}
           </div>
+
+          {/* Exact Inline Weight / Volume Adjustment */}
+          {isMeasurable ? (
+            <div className="mt-2.5 space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="inline-flex items-center bg-slate-50 border border-slate-200/90 rounded-xl px-2 py-1 shadow-sm">
+                  <Scale className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
+                  <input
+                    type="number"
+                    step="any"
+                    min="0.001"
+                    value={inputWeight}
+                    onChange={handleWeightChange}
+                    className="w-16 px-1.5 py-0.5 bg-white border border-slate-200 rounded-lg text-xs font-black text-slate-900 text-center focus:outline-none focus:ring-1 focus:ring-brand-500"
+                    title="Edit exact measured weight"
+                  />
+                  <div className="flex items-center ml-1.5 bg-slate-200/60 p-0.5 rounded-lg">
+                    {isVolume ? (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleUnitToggle('L')}
+                          className={`px-1.5 py-0.5 text-[10px] font-black rounded-md transition-colors cursor-pointer ${unit === 'L' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          L
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUnitToggle('ml')}
+                          className={`px-1.5 py-0.5 text-[10px] font-black rounded-md transition-colors cursor-pointer ${unit === 'ml' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          ml
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleUnitToggle('kg')}
+                          className={`px-1.5 py-0.5 text-[10px] font-black rounded-md transition-colors cursor-pointer ${unit === 'kg' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          kg
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleUnitToggle('g')}
+                          className={`px-1.5 py-0.5 text-[10px] font-black rounded-md transition-colors cursor-pointer ${unit === 'g' ? 'bg-brand-500 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}`}
+                        >
+                          g
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick weight preset chips */}
+                <div className="flex items-center gap-1">
+                  {(isVolume ? [500, 1000, 2000] : [250, 500, 1000, 2000]).map((grams) => {
+                    const isSelected = currentWeightGrams === grams;
+                    const label = isVolume
+                      ? (grams >= 1000 ? `${grams / 1000}L` : `${grams}ml`)
+                      : (grams >= 1000 ? `${grams / 1000}kg` : `${grams}g`);
+                    return (
+                      <button
+                        key={grams}
+                        type="button"
+                        onClick={() => {
+                          if (isVolume) {
+                            if (grams >= 1000) {
+                              setUnit('L');
+                              setInputWeight((grams / 1000).toString());
+                            } else {
+                              setUnit('ml');
+                              setInputWeight(grams.toString());
+                            }
+                          } else {
+                            if (grams >= 1000) {
+                              setUnit('kg');
+                              setInputWeight((grams / 1000).toString());
+                            } else {
+                              setUnit('g');
+                              setInputWeight(grams.toString());
+                            }
+                          }
+                          onUpdateWeight(itemId, grams);
+                        }}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded-lg border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-brand-50 border-brand-300 text-brand-700 shadow-sm'
+                            : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-slate-400 mt-1">
+              Unit: {item.unit || '1 pack'}
+            </p>
+          )}
         </div>
       </div>
 
-      {/* Quantity Stepper & Remove */}
-      <div className="flex items-center justify-between sm:justify-end gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 border-slate-100">
-        <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50/50 p-1">
+      {/* Stepper & Price Row */}
+      <div className="flex items-center justify-between sm:justify-end gap-4 pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100 shrink-0">
+        {/* Quantity Stepper */}
+        <div className="flex items-center border border-slate-200 rounded-xl bg-slate-50 p-1 shadow-sm">
           <button
             onClick={() => onUpdateQuantity(itemId, -1)}
-            className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
+            className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
             title="Decrease quantity"
           >
             <Minus className="w-3.5 h-3.5" />
@@ -220,16 +272,29 @@ const CartItemCard = ({
           </span>
           <button
             onClick={() => onUpdateQuantity(itemId, 1)}
-            className="w-7 h-7 rounded-lg bg-white shadow-2xs flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
+            className="w-7 h-7 rounded-lg bg-white shadow-sm flex items-center justify-center text-slate-700 hover:bg-slate-100 active:scale-95 transition-all cursor-pointer"
             title="Increase quantity"
           >
             <Plus className="w-3.5 h-3.5" />
           </button>
         </div>
 
+        {/* Line Total Price Display */}
+        <div className="text-right min-w-[75px]">
+          <div className="text-base sm:text-lg font-black text-slate-900">
+            ₹{lineTotal}
+          </div>
+          {originalTotal && (
+            <div className="text-xs text-slate-400 line-through">
+              ₹{originalTotal}
+            </div>
+          )}
+        </div>
+
+        {/* Remove button desktop */}
         <button
           onClick={() => onRemove(itemId)}
-          className="p-2 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer"
+          className="hidden sm:flex p-2 text-slate-400 hover:text-rose-600 rounded-xl hover:bg-rose-50 transition-colors cursor-pointer"
           title="Remove item"
         >
           <Trash2 className="w-4 h-4" />
@@ -251,10 +316,8 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   const { 
     cart, 
     updateQuantity, 
-    increaseQuantity,
-    decreaseQuantity,
-    updateItemWeight,
-    getItemPrice,
+    updateItemWeight, 
+    getItemPrice, 
     removeFromCart, 
     clearCart, 
     totalItems, 
@@ -298,6 +361,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   const [placingOrder, setPlacingOrder] = useState(false);
 
   const amountForFreeDelivery = Math.max(0, (freeDeliveryThreshold || 199) - subtotal);
+  const freeDeliveryProgress = Math.min(100, Math.round((subtotal / (freeDeliveryThreshold || 199)) * 100));
 
   // Sync user defaults when authentication loads
   useEffect(() => {
@@ -356,11 +420,9 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
   const handleInitiateWhatsAppOrder = () => {
     if (!validateCustomerDetails()) return;
 
-    // If multiple active store contacts exist, let customer choose
     if (contacts.length > 1) {
       setIsContactModalOpen(true);
     } else {
-      // Single contact or fallback to default
       executeWhatsAppOrder(selectedContact || contacts[0] || null);
     }
   };
@@ -421,7 +483,6 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         console.warn('Backend order API issue, falling back to instant client order:', apiErr.message);
       }
 
-      // If backend was offline, create robust client order fallback so user isn't stuck
       if (!finalSavedOrder) {
         const fallbackId = 'WA-' + Math.floor(100000 + Math.random() * 900000);
         finalSavedOrder = {
@@ -435,7 +496,6 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         };
       }
 
-      // Generate pre-filled WhatsApp message URL
       const targetPhone = contact?.phoneNumber || whatsappService.getAdminPhone();
       const generatedWaUrl = whatsappService.getWhatsAppOrderUrl(finalSavedOrder, targetPhone);
 
@@ -447,7 +507,6 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
       setIsCheckoutOpen(false);
       clearCart();
 
-      // Open WhatsApp automatically
       whatsappService.openWhatsApp(generatedWaUrl);
     } catch (err) {
       setFormError(err.message || 'Could not prepare WhatsApp order. Please try again.');
@@ -456,7 +515,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
     }
   };
 
-  // Standard Web Checkout Flow (Cash on Delivery)
+  // Standard Web Checkout Flow
   const handlePlaceOrder = async () => {
     if (!validateCustomerDetails()) return;
     setPlacingOrder(true);
@@ -534,42 +593,76 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
     }
   };
 
+  // Empty Cart State
   if (cart.length === 0 && !orderPlaced) {
     return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center px-4 py-16 bg-[#F8FAFC]">
-        <div className="w-24 h-24 rounded-full bg-brand-50 text-brand-500 flex items-center justify-center mb-6 shadow-inner">
-          <ShoppingCart className="w-12 h-12 stroke-[1.5]" />
+      <div className="min-h-[75vh] flex flex-col items-center justify-center px-4 py-16 bg-slate-50/50 pb-28 md:pb-16">
+        <div className="relative mb-6">
+          <div className="w-28 h-28 rounded-3xl bg-brand-50 border border-brand-100/80 text-brand-600 flex items-center justify-center shadow-sm">
+            <ShoppingCart className="w-14 h-14 stroke-[1.5]" />
+          </div>
+          <span className="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-md">
+            0
+          </span>
         </div>
-        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2">Your Cart is Empty</h2>
-        <p className="text-sm text-slate-500 max-w-md text-center mb-8">
-          Looks like you haven't added any fresh groceries to your cart yet. Explore our pantry staples and fresh farm produce!
+
+        <h2 className="text-2xl sm:text-3xl font-black text-slate-900 mb-2.5 tracking-tight text-center">
+          Your Cart is Empty
+        </h2>
+        <p className="text-xs sm:text-sm text-slate-500 max-w-sm text-center mb-8 leading-relaxed">
+          Looks like you haven't added any fresh groceries to your cart yet. Explore our pantry staples and farm-fresh produce!
         </p>
-        <button
-          onClick={() => navigateTo('products')}
-          className="px-8 py-3.5 rounded-full bg-brand-500 hover:bg-brand-600 text-white font-bold text-sm shadow-lg shadow-brand-500/25 flex items-center gap-2 transition-all active:scale-95 cursor-pointer"
-        >
-          <span>Start Shopping</span>
-          <ArrowRight className="w-4 h-4" />
-        </button>
+
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full max-w-xs">
+          <button
+            onClick={() => navigateTo('products')}
+            className="w-full py-3.5 px-6 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-98 text-white font-bold text-sm shadow-lg shadow-brand-500/25 flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <span>Explore All Products</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+          <button
+            onClick={() => navigateTo('categories')}
+            className="w-full py-3 px-6 rounded-2xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <span>Browse Categories</span>
+          </button>
+        </div>
+
+        {/* Value props */}
+        <div className="mt-12 grid grid-cols-3 gap-4 max-w-md w-full text-center border-t border-slate-200/80 pt-8">
+          <div>
+            <div className="text-base font-black text-slate-900">⚡ 15 Mins</div>
+            <div className="text-[11px] text-slate-500 font-medium">Express Delivery</div>
+          </div>
+          <div>
+            <div className="text-base font-black text-slate-900">🥬 100% Fresh</div>
+            <div className="text-[11px] text-slate-500 font-medium">Farm Sourced</div>
+          </div>
+          <div>
+            <div className="text-base font-black text-slate-900">💬 WhatsApp</div>
+            <div className="text-[11px] text-slate-500 font-medium">Instant Orders</div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fadeIn pb-28 md:pb-16">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-200/80">
         <div>
           <button 
             onClick={() => navigateTo('products')}
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-500 hover:text-brand-600 mb-2 transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-500 hover:text-brand-600 mb-2 transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
             <span>Continue Shopping</span>
           </button>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 flex items-center gap-3">
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 flex items-center gap-3 tracking-tight">
             <span>Shopping Cart</span>
-            <span className="text-xs px-2.5 py-1 bg-brand-50 text-brand-600 font-bold rounded-full">
+            <span className="text-xs px-2.5 py-1 bg-brand-50 text-brand-700 font-black rounded-full border border-brand-200/60">
               {totalItems} items
             </span>
           </h1>
@@ -578,7 +671,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         {cart.length > 0 && (
           <button
             onClick={clearCart}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-xs font-bold transition-colors cursor-pointer self-start sm:self-auto"
           >
             <Trash2 className="w-3.5 h-3.5" />
             <span>Clear Cart</span>
@@ -586,22 +679,38 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
         )}
       </div>
 
-      {/* Free Delivery Bar */}
-      {amountForFreeDelivery > 0 ? (
-        <div className="p-4 mb-8 bg-amber-50/70 border border-amber-200/80 rounded-2xl flex items-center gap-3 text-xs sm:text-sm text-amber-900">
-          <Truck className="w-5 h-5 text-amber-600 shrink-0" />
-          <span>
-            Add <strong className="text-amber-950 font-black">₹{amountForFreeDelivery}</strong> more to qualify for <strong className="text-emerald-700 font-black">FREE 15-Minute Express Delivery</strong>!
+      {/* Free Delivery Animated Progress Bar */}
+      <div className="mb-8 p-4 sm:p-5 bg-white rounded-3xl border border-slate-200/90 shadow-sm space-y-3">
+        <div className="flex items-center justify-between text-xs sm:text-sm">
+          <div className="flex items-center gap-2.5">
+            <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${amountForFreeDelivery <= 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-brand-50 text-brand-600'}`}>
+              {amountForFreeDelivery <= 0 ? <CheckCircle2 className="w-4 h-4" /> : <Truck className="w-4 h-4" />}
+            </div>
+            <span className="font-bold text-slate-800">
+              {amountForFreeDelivery > 0 ? (
+                <>
+                  Add <span className="text-brand-600 font-black">₹{amountForFreeDelivery}</span> more to unlock <strong className="text-emerald-700">FREE 15-Minute Express Delivery</strong>!
+                </>
+              ) : (
+                <span className="text-emerald-700 font-black flex items-center gap-1.5">
+                  🎉 You unlocked FREE 15-Minute Express Delivery!
+                </span>
+              )}
+            </span>
+          </div>
+          <span className="text-xs font-bold text-slate-500 shrink-0 font-mono">
+            ₹{subtotal} / ₹{freeDeliveryThreshold || 199}
           </span>
         </div>
-      ) : (
-        <div className="p-4 mb-8 bg-emerald-50/70 border border-emerald-200/80 rounded-2xl flex items-center gap-3 text-xs sm:text-sm text-emerald-900">
-          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
-          <span>
-            Awesome! You have unlocked <strong className="text-emerald-950 font-black">FREE 15-Minute Delivery</strong> on this order!
-          </span>
+
+        {/* Progress track */}
+        <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5">
+          <div 
+            className={`h-full rounded-full transition-all duration-500 ${amountForFreeDelivery <= 0 ? 'bg-gradient-to-r from-emerald-500 to-teal-500' : 'bg-gradient-to-r from-brand-500 to-blue-500'}`}
+            style={{ width: `${freeDeliveryProgress}%` }}
+          />
         </div>
-      )}
+      </div>
 
       {/* Main Cart Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -621,12 +730,14 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
 
         {/* Right Col: Bill Summary Card */}
         <div className="lg:col-span-1">
-          <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/80 shadow-xs space-y-6 sticky top-24">
-            <h2 className="text-base font-black text-slate-900">Order Summary</h2>
+          <div className="bg-white p-5 sm:p-6 rounded-3xl border border-slate-200/90 shadow-sm space-y-6 sticky top-24">
+            <h2 className="text-base font-black text-slate-900 tracking-tight">
+              Order Bill Summary
+            </h2>
 
             {/* Promo Code Input */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
                 Have a coupon code?
               </label>
               {coupon ? (
@@ -649,7 +760,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                     placeholder="e.g. FRESH20"
                     value={inputCoupon}
                     onChange={(e) => setInputCoupon(e.target.value)}
-                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase focus:outline-none focus:border-brand-500"
+                    className="flex-1 px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold uppercase focus:outline-none focus:border-brand-500 focus:bg-white transition-colors"
                   />
                   <button
                     type="submit"
@@ -660,14 +771,14 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 </form>
               )}
               {couponError && (
-                <p className="text-xs text-rose-500 mt-1">{couponError}</p>
+                <p className="text-xs text-rose-500 font-medium mt-1">{couponError}</p>
               )}
             </div>
 
             {/* Cost Calculations */}
             <div className="space-y-2.5 text-xs sm:text-sm text-slate-600 border-t border-slate-100 pt-4">
               <div className="flex justify-between">
-                <span>Items Total ({totalItems} items)</span>
+                <span>Items MRP Total ({totalItems} items)</span>
                 <span className="font-semibold text-slate-900">₹{originalSubtotal}</span>
               </div>
 
@@ -686,16 +797,32 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
               )}
 
               <div className="flex justify-between items-center">
-                <span>Delivery Fee</span>
+                <span>Delivery Charge</span>
                 {deliveryFee === 0 ? (
-                  <span className="text-emerald-600 font-bold uppercase text-xs">FREE</span>
+                  <span className="text-emerald-700 font-black uppercase text-xs bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                    FREE
+                  </span>
                 ) : (
                   <span className="font-semibold text-slate-900">₹{deliveryFee}</span>
                 )}
               </div>
 
+              {/* Total Savings Pill */}
+              {(itemsDiscount > 0 || couponDiscount > 0) && (
+                <div className="py-2 px-3 rounded-xl bg-emerald-50 border border-emerald-200/80 text-emerald-800 text-xs font-bold flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Total Savings</span>
+                  </span>
+                  <span className="font-black text-emerald-700">₹{itemsDiscount + couponDiscount}</span>
+                </div>
+              )}
+
               <div className="border-t border-slate-200 pt-3 flex justify-between items-baseline">
-                <span className="text-base font-black text-slate-900">Grand Total</span>
+                <div>
+                  <span className="text-base font-black text-slate-900 block">Grand Total</span>
+                  <span className="text-[10px] text-slate-400 font-medium">Inclusive of all taxes</span>
+                </div>
                 <span className="text-2xl font-black text-brand-600">₹{finalTotal}</span>
               </div>
             </div>
@@ -706,25 +833,25 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
               <button
                 type="button"
                 onClick={() => setIsCheckoutOpen(true)}
-                className="w-full py-3.5 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-bold text-sm shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
+                className="w-full py-3.5 px-4 rounded-2xl bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-black text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 transition-all cursor-pointer"
               >
                 <WhatsAppIcon className="w-5 h-5 fill-white" />
-                <span>Order via WhatsApp</span>
+                <span>Order via WhatsApp • ₹{finalTotal}</span>
               </button>
 
               {/* Standard Web Checkout */}
               <button
                 type="button"
                 onClick={() => setIsCheckoutOpen(true)}
-                className="w-full py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
+                className="w-full py-3 px-4 rounded-2xl bg-slate-900 hover:bg-slate-800 active:scale-98 text-white font-bold text-xs shadow-md flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <span>Standard Web Checkout</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             </div>
 
-            <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400">
-              <ShieldCheck className="w-4 h-4 text-emerald-500" />
+            <div className="flex items-center justify-center gap-2 text-[11px] text-slate-400 pt-1">
+              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
               <span>100% Safe &amp; Contactless 15-Min Delivery</span>
             </div>
           </div>
@@ -734,27 +861,27 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
 
       {/* Complete Customer Checkout Modal */}
       {isCheckoutOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-lg w-full p-5 sm:p-7 shadow-2xl border border-slate-100 space-y-5 relative max-h-[92vh] overflow-y-auto">
             <button
               onClick={() => setIsCheckoutOpen(false)}
-              className="absolute top-5 right-5 p-1 text-slate-400 hover:text-slate-600 cursor-pointer"
+              className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
 
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center shrink-0">
                 <MapPin className="w-5 h-5" />
               </div>
               <div>
                 <h3 className="text-lg font-extrabold text-slate-900">Delivery &amp; Checkout</h3>
-                <p className="text-xs text-slate-500">Enter your delivery details and choose how to order</p>
+                <p className="text-xs text-slate-500">Enter your delivery details and choose your payment method</p>
               </div>
             </div>
 
             {formError && (
-              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+              <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2 font-medium">
                 <X className="w-4 h-4 shrink-0" />
                 <span>{formError}</span>
               </div>
@@ -770,10 +897,10 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 <input
                   type="text"
                   required
-                  placeholder="e.g. John Doe"
+                  placeholder="e.g. Rahul Sharma"
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
               </div>
 
@@ -788,7 +915,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                   placeholder="e.g. 9876543210"
                   value={customerPhone}
                   onChange={(e) => setCustomerPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold font-mono text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
               </div>
 
@@ -800,10 +927,10 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 <textarea
                   rows={2}
                   required
-                  placeholder="House/Flat No, Apartment, Street, Landmark, Bengaluru"
+                  placeholder="Flat No, Building, Street, Landmark, City"
                   value={customerAddress}
                   onChange={(e) => setCustomerAddress(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all"
                 />
               </div>
 
@@ -814,11 +941,57 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Leave at door, call when outside, ring bell twice"
+                  placeholder="e.g. Leave with security, call when nearby"
                   value={deliveryNotes}
                   onChange={(e) => setDeliveryNotes(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none"
+                  className="w-full px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 focus:outline-none focus:border-slate-300"
                 />
+              </div>
+            </div>
+
+            {/* Payment Method Selector */}
+            <div>
+              <label className="block text-xs font-bold text-slate-700 mb-1.5">
+                Payment Option
+              </label>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('cod')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    paymentMethod === 'cod'
+                      ? 'border-brand-500 bg-brand-50/50 ring-2 ring-brand-500/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <Banknote className="w-4 h-4 text-emerald-600" />
+                    <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${paymentMethod === 'cod' ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
+                      {paymentMethod === 'cod' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-900 block">Cash on Delivery</span>
+                  <span className="text-[10px] text-slate-500">Pay cash or UPI at delivery</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setPaymentMethod('online')}
+                  className={`p-3 rounded-2xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                    paymentMethod === 'online'
+                      ? 'border-brand-500 bg-brand-50/50 ring-2 ring-brand-500/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <CreditCard className="w-4 h-4 text-brand-600" />
+                    <span className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center ${paymentMethod === 'online' ? 'border-brand-600 bg-brand-600' : 'border-slate-300'}`}>
+                      {paymentMethod === 'online' && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
+                    </span>
+                  </div>
+                  <span className="text-xs font-bold text-slate-900 block">Online / UPI QR</span>
+                  <span className="text-[10px] text-slate-500">Google Pay, PhonePe, Cards</span>
+                </button>
               </div>
             </div>
 
@@ -869,7 +1042,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
               )}
               <div className="pt-1.5 border-t border-emerald-200/80 flex justify-between items-baseline font-black text-slate-900 text-sm">
                 <span>Payable Total:</span>
-                <span className="text-base text-emerald-700">₹{finalTotal}</span>
+                <span className="text-base text-emerald-700 font-black">₹{finalTotal}</span>
               </div>
             </div>
 
@@ -879,7 +1052,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 type="button"
                 onClick={handleInitiateWhatsAppOrder}
                 disabled={placingOrder}
-                className="w-full py-3.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-bold text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-75"
+                className="w-full py-3.5 px-4 bg-[#25D366] hover:bg-[#20bd5a] active:scale-98 text-white font-black text-sm rounded-2xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2.5 transition-all cursor-pointer disabled:opacity-75"
               >
                 {placingOrder ? (
                   <>
@@ -900,7 +1073,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 disabled={placingOrder}
                 className="w-full py-3 bg-slate-100 hover:bg-slate-200 active:scale-98 text-slate-800 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-75"
               >
-                <span>Place Standard Order (Cash on Delivery)</span>
+                <span>Place Standard Order ({paymentMethod === 'cod' ? 'Cash on Delivery' : 'Online UPI'})</span>
               </button>
             </div>
           </div>
@@ -909,7 +1082,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
 
       {/* "Choose where to send your order" Contact Selection Modal */}
       {isContactModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <div className="flex items-center gap-2.5">
@@ -940,7 +1113,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                   onClick={() => setSelectedContact(contact)}
                   className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
                     selectedContact?._id === contact._id
-                      ? 'border-emerald-500 bg-emerald-50/60 shadow-xs'
+                      ? 'border-emerald-500 bg-emerald-50/60 shadow-sm'
                       : 'border-slate-200 hover:bg-slate-50/70'
                   }`}
                 >
@@ -1004,7 +1177,7 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
 
       {/* Order Success & WhatsApp Ready Modal */}
       {orderPlaced && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
           <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 shadow-2xl border border-slate-100 text-center space-y-5">
             <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mx-auto animate-bounce-short">
               <CheckCircle2 className="w-9 h-9" />
@@ -1068,7 +1241,6 @@ export const Cart = ({ navigateTo: propNavigateTo }) => {
                 </div>
               </div>
 
-              {/* Main "Send Order on WhatsApp" button matching user specs */}
               <button
                 type="button"
                 onClick={() => {

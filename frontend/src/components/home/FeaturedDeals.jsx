@@ -1,24 +1,49 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Clock, ArrowRight, Flame } from 'lucide-react';
+import { Clock, ArrowRight, Flame } from 'lucide-react';
 import { productService } from '../../services/productService';
-import { products as fallbackProducts } from '../../data/products';
 import { ProductCard } from '../common/ProductCard';
 
 export const FeaturedDeals = ({ onSelectProduct, onViewAll }) => {
-  const [dealProducts, setDealProducts] = useState(() =>
-    fallbackProducts.filter(p => p.featured).slice(0, 4)
-  );
+  const [dealProducts, setDealProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    productService.getAllProducts().then(res => {
-      if (res && res.products && res.products.length > 0) {
-        const feats = res.products.filter(p => p.featured).slice(0, 4);
-        if (feats.length > 0) {
-          setDealProducts(feats);
+    let isMounted = true;
+    setLoading(true);
+
+    productService.getAllProducts({ limit: 20 })
+      .then((res) => {
+        if (!isMounted) return;
+        if (res && res.products && res.products.length > 0) {
+          // Prioritize products marked featured or discounted items
+          let feats = res.products.filter(
+            (p) => p.featured || (p.originalPrice && p.originalPrice > p.price)
+          );
+          // If none explicitly marked, show the first 4 real products from the admin catalog
+          if (feats.length === 0) {
+            feats = res.products.slice(0, 4);
+          }
+          setDealProducts(feats.slice(0, 4));
+        } else {
+          setDealProducts([]);
         }
-      }
-    }).catch(() => {});
+      })
+      .catch(() => {
+        if (isMounted) setDealProducts([]);
+      })
+      .finally(() => {
+        if (isMounted) setLoading(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
+
+  // If no real products exist in store, don't show fake demo products
+  if (!loading && dealProducts.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-10 sm:py-14 supermart-hero">
@@ -35,10 +60,10 @@ export const FeaturedDeals = ({ onSelectProduct, onViewAll }) => {
                 <span>Super Deal of the Day</span>
               </div>
               <h3 className="text-xl sm:text-3xl font-black tracking-tight">
-                Up to 30% OFF on Farm Staples
+                Up to 30% OFF on Daily Staples
               </h3>
               <p className="text-blue-100 text-xs sm:text-sm max-w-lg">
-                Stock your pantry with farm-fresh organic milk, premium basmati rice, eggs and healthy fruits today.
+                Stock your pantry with farm-fresh produce, dairy, rice, and healthy essentials delivered in 15 minutes.
               </p>
             </div>
 
@@ -80,19 +105,30 @@ export const FeaturedDeals = ({ onSelectProduct, onViewAll }) => {
             </button>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
-            {dealProducts.map(prod => (
-              <ProductCard
-                key={prod.id || prod._id}
-                product={prod}
-                onSelectProduct={onSelectProduct}
-              />
-            ))}
-          </div>
+          {loading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 animate-pulse">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className="bg-white rounded-2xl p-3 border border-slate-100 shadow-sm space-y-3">
+                  <div className="w-full h-36 bg-slate-100 rounded-xl" />
+                  <div className="h-4 bg-slate-100 rounded w-3/4" />
+                  <div className="h-3 bg-slate-100 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6">
+              {dealProducts.map((prod) => (
+                <ProductCard
+                  key={prod.id || prod._id}
+                  product={prod}
+                  onSelectProduct={onSelectProduct}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
       </div>
     </section>
   );
 };
-

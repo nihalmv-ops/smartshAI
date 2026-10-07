@@ -17,26 +17,24 @@ export const productService = {
   getAllProducts: async (params = {}) => {
     try {
       const response = await api.get('/products', { params });
-      if (response.data && response.data.products) {
+      if (response.data && Array.isArray(response.data.products)) {
         return {
           success: true,
           products: response.data.products.map(normalizeProduct),
-          total: response.data.total || response.data.products.length,
+          total: response.data.total !== undefined ? response.data.total : response.data.products.length,
           count: response.data.count,
           page: response.data.page || 1,
           pages: response.data.pages || 1
         };
       }
-      return { success: true, products: localProducts.map(normalizeProduct), total: localProducts.length };
+      return { success: true, products: [], total: 0 };
     } catch (error) {
-      console.warn('API error in getAllProducts, falling back to local catalog:', error.message);
-      // Resilient local fallback
-      const filtered = productService.searchAndFilterLocal(params);
+      console.warn('API error in getAllProducts:', error.message);
       return {
-        success: true,
-        products: filtered.map(normalizeProduct),
-        total: filtered.length,
-        fromFallback: true
+        success: false,
+        products: [],
+        total: 0,
+        error: error.message
       };
     }
   },
@@ -50,9 +48,8 @@ export const productService = {
       }
       return null;
     } catch (error) {
-      console.warn(`API error in getProductById(${id}), checking local catalog:`, error.message);
-      const local = localProducts.find(p => p.id === id || p._id === id);
-      return local ? normalizeProduct(local) : null;
+      console.warn(`API error in getProductById(${id}):`, error.message);
+      return null;
     }
   },
 

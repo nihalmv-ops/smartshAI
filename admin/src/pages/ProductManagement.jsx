@@ -44,6 +44,8 @@ export const ProductManagement = () => {
     lowStockThreshold: 10,
     stockCount: 50,
     inStock: true,
+    popular: true,
+    featured: false,
     badge: 'Fresh',
     image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80',
     description: 'Fresh and high-grade grocery selection.'
@@ -104,6 +106,8 @@ export const ProductManagement = () => {
       lowStockThreshold: p.lowStockThreshold || 10,
       stockCount: p.stockCount !== undefined ? p.stockCount : 50,
       inStock: p.inStock !== undefined ? p.inStock : true,
+      popular: p.popular !== undefined ? Boolean(p.popular) : true,
+      featured: p.featured !== undefined ? Boolean(p.featured) : false,
       badge: p.badge || '',
       image: p.image,
       description: p.description || ''
@@ -850,6 +854,35 @@ export const ProductManagement = () => {
                     placeholder="e.g. Fresh, Popular"
                   />
                 </div>
+              </div>
+
+              {/* Home Storefront Display Toggles */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3.5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={productForm.popular}
+                    onChange={(e) => setProductForm({ ...productForm, popular: e.target.checked })}
+                    className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 accent-brand-600 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Popular Product</span>
+                    <span className="text-[10px] text-slate-500">Show on Storefront Home Popular section</span>
+                  </div>
+                </label>
+
+                <label className="flex items-center gap-2.5 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={productForm.featured}
+                    onChange={(e) => setProductForm({ ...productForm, featured: e.target.checked })}
+                    className="w-4 h-4 rounded text-brand-600 focus:ring-brand-500 accent-brand-600 cursor-pointer"
+                  />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 block">Featured Deal</span>
+                    <span className="text-[10px] text-slate-500">Show in Super Deal of the Day banner</span>
+                  </div>
+                </label>
               </div>
 
               {/* Image Upload with live preview */}

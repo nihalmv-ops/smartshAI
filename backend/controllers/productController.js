@@ -133,8 +133,8 @@ export const createProduct = async (req, res, next) => {
       image,
       description: description || '',
       nutrition: nutrition || { calories: '-', protein: '-', carbs: '-', fat: '-' },
-      featured: featured || false,
-      popular: popular || false
+      featured: featured !== undefined ? Boolean(featured) : false,
+      popular: popular !== undefined ? Boolean(popular) : true
     });
 
     res.status(201).json({

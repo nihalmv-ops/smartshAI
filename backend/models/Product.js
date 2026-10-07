@@ -69,7 +69,7 @@ const productSchema = new mongoose.Schema(
     },
     popular: {
       type: Boolean,
-      default: false
+      default: true
     },
     costPrice: {
       type: Number,
